@@ -14,22 +14,15 @@ import subprocess
 import asyncio
 from dateutil import tz
 import sys
-from pathlib import Path
 import requests
-import psutil
 from bs4 import BeautifulSoup
 from base58 import b58decode, b58encode
 from base64 import b64decode, b64encode
 
-from spl.token.constants import TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
 from solana.rpc.api import Client
 from solana.rpc import types
 from solana.keypair import Keypair
 from solana.publickey import PublicKey
-from solana.transaction import Transaction
-from solana.transaction import AccountMeta, TransactionInstruction, Transaction
-from spl.token.instructions import create_associated_token_account, transfer_checked, TransferCheckedParams, get_associated_token_address
-from solana.system_program import TransferParams, transfer
 from solana.blockhash import Blockhash
 from solana.rpc.commitment import Commitment
 from anchorpy import Program, Wallet, Provider
@@ -46,13 +39,13 @@ from modules import (
     LaunchMyNftLaunchpad,
     CoralCube,
     NeuraDB,
-    MonkeLabsLaunchpad
+    MonkeLabsLaunchpad,
+    SolWalletManager
 )
 
 from lib import (
     AccountClient
 )
-from modules.sol_wallet_manager import SolWalletManager
 
 from utils import *
 
@@ -3842,11 +3835,7 @@ while True:
                             privkey=privkey
                         )
                         
-                        trs = []
-                        
-                        if valid_nfts:
-                            
-                            console.print(logger(f"{status} [yellow]Purchasing...[/]"))
+                        trs = []                            
 
                         for nft in valid_nfts:
                             
@@ -3856,8 +3845,8 @@ while True:
                             price = nft["price"]
                             creators = [creator["address"] for creator in nft["creators"]]
                             escrow_pubkey = nft["escrowPubkey"]
-                            
-                            success_status = f"{status} [green]Purchased {name}[/] [purple]>[/] [cyan]{price} SOL[/]"
+                                                        
+                            console.print(logger(f"{status} [yellow]Purchasing {name}[/] [purple]>[/] [cyan]{price}[/]"))
                             
                             buyT = Thread(
                                 target=sniper.buy_nft_api,
@@ -3865,7 +3854,6 @@ while True:
                                     seller,
                                     sol_to_lamports(price),
                                     mint_address,
-                                    success_status
                                 ]
                             )
                             
