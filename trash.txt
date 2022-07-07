@@ -1,0 +1,25 @@
+http://54.221.221.21:8899/
+
+https://eu-node.hydrascriptsnft.com/
+
+https://solstake.rpcpool.com/
+
+bot-test-token: OTM3NjYzMDU2NDcxNzg1NDgy.GLUXu3.3_c9RD6P7G6I2LG-ux_k7mgNSaSlP4paHg8i_U
+https://staratlasexchange.genesysgo.net/
+https://sonar.genesysgo.net/
+https://socean.genesysgo.net/
+https://drift.genesysgo.net/
+https://phantasia.genesysgo.net/
+https://grape.genesysgo.net/
+https://bridgesplit.genesysgo.net/
+https://alice.genesysgo.net/
+https://fabric.genesysgo.net/
+
+devnet-cmid: DSk3NPTg8cAEGmszbdhCYbQyBxpHCbytkKoE8fiYwAzd
+
+3kxSe8ZskRsH9SWHys5pSV4eEbWZY7SfJerpa9gSauYKmWPAG5m1BHWtrNfDx6wChutcWERzBjgb4VFexqJm4Eje
+
+53zQAff6ZGsHdJ2okMoSGeXyqw5oBaph1kVGoc1YrXYyWTBxPt3ZCuZ8CyWD73V5MNTE4D79p6Ghrr4q8gN6zcEN
+
+3chJPsP3iLRAg2FiRrd5D1N4DfKKhkVw2DWpWP7rf9L7ccFNE5kp39aX86D7BQRZfXuxyXdgyAAdBqW5mkQVNx87
+
