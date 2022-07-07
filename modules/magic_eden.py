@@ -84,7 +84,7 @@ class MagicEden():
 
         except:
 
-            pass
+            return None
 
     def get_listed_nfts(symbol: str, min_sol: float = 0, max_sol: float = 999999999, limit: int = 20, recenlty_listed: bool = False) -> list | None:
 
@@ -116,14 +116,8 @@ class MagicEden():
 
                 query = {"$match":{"$or":[{"collectionSymbol":symbol},{"onChainCollectionAddress":symbol}],"takerAmount":{"$gte":sol_to_lamports(min_sol),"$lte":sol_to_lamports(max_sol)}},"$sort":{"takerAmount":1},"$skip":i*20,"$limit":limit,"status":[]}
                 
-                if recenlty_listed:
+                query["$sort"] = {"createdAt": -1} if recenlty_listed else {"takerAmount": 1}
 
-                    query["$sort"] = {"createdAt": -1}
-                    
-                else:
-                    
-                    query["$sort"] = {"takerAmount": 1}
-                    
                 query = quote(json.dumps(query))
 
                 payload = create_tls_payload(
@@ -253,11 +247,9 @@ class MagicEden():
 
         price = lamports_to_sol(price)
         
-        token_ata = str(
-            get_associated_token_address(
-                owner=PublicKey(seller),
-                mint=PublicKey(mint)
-            )
+        token_ata = get_associated_token_address(
+            owner=PublicKey(seller),
+            mint=PublicKey(mint)
         )
         
         url = f"https://api-mainnet.magiceden.io/v2/instructions/sell?seller={self.payer.public_key}&auctionHouseAddress={AUCTION_HOUSE}&tokenMint={mint}&tokenAccount={token_ata}&price={price}&expiry=-1"
@@ -317,13 +309,11 @@ class MagicEden():
 
         price = lamports_to_sol(price)
         
-        token_ata = str(
-            get_associated_token_address(
-                owner=PublicKey(seller),
-                mint=PublicKey(mint)
-            )
+        token_ata = get_associated_token_address(
+            owner=PublicKey(seller),
+            mint=PublicKey(mint)
         )
-        
+
         url = f"https://api-mainnet.magiceden.io/v2/instructions/sell_cancel?seller={self.payer.public_key}&auctionHouseAddress={AUCTION_HOUSE}&tokenMint={mint}&tokenAccount={token_ata}&price={price}&sellerReferral={SELLER_REFERAL}&expiry=-1"
 
         headers = {
@@ -376,17 +366,15 @@ class MagicEden():
         return None
     
     
-    def buy_nft_api(self, seller: str, price: int, mint: str, status: str = None) -> str | None:
+    def buy_nft_api(self, seller: str, price: int, mint: str) -> str | None:
         
         OPTS = TxOpts(skip_preflight=True, skip_confirmation=False, preflight_commitment=Commitment("confirmed"))
 
         price = lamports_to_sol(price)
 
-        token_ata = str(
-            get_associated_token_address(
-                owner=PublicKey(seller),
-                mint=PublicKey(mint)
-            )
+        token_ata = get_associated_token_address(
+            owner=PublicKey(seller),
+            mint=PublicKey(mint)
         )
                  
         url = f"https://api-mainnet.magiceden.io/v2/instructions/buy_now?buyer={self.payer.public_key}&seller={seller}&auctionHouseAddress={AUCTION_HOUSE}&tokenMint={mint}&tokenATA={token_ata}&price={price}&sellerReferral={SELLER_REFERAL}&sellerExpiry=-1"
@@ -432,10 +420,6 @@ class MagicEden():
 
                 tx_hash = self.client.send_raw_transaction(serialized, opts=OPTS)["result"]
                 
-                if status:
-                    
-                    console.print(logger(status))
-                    
                 return tx_hash
 
             except UnconfirmedTxError:
