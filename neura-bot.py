@@ -136,72 +136,34 @@ def check_ID(id: str):
 
     try:
 
-        headers = {
-            'Content-Type': 'application/json',
-        }
+        client = Client(sol_rpc)
+        
+        res = client.get_account_info(id)
 
-        params = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "getAccountInfo",
-            "params": [
-                id,
-                {
-                    "encoding": "base64"
-                }
-            ]
-        }
+        owner = res["result"]["value"]["owner"]
+        data = res["result"]["value"]["data"][0]
 
-        res = requests.post(
-            'http://api.mainnet-beta.solana.com/', headers=headers, json=params, timeout=5).json()
+        data = str(base64.b64decode(data))
 
-        if res:
+        website = re.search("(?P<url>https?://[^\s]+)", data)
 
-            if "error" not in res.keys() and "result" in res.keys():
+        if not CM:
 
-                if "value" in res["result"].keys():
+            if owner == "cndy3Z4yapfJBmL3ShUp5exZKqR3z33thTzeNMm2gRZ" and website:
 
-                    if "owner" and "data" in res["result"]["value"].keys():
-
-                        owner = res["result"]["value"]["owner"]
-                        data = res["result"]["value"]["data"][0]
-
-                        data = str(base64.b64decode(data))
-
-                        website = re.search("(?P<url>https?://[^\s]+)", data)
-
-                        if not CM:
-
-                            if owner == "cndy3Z4yapfJBmL3ShUp5exZKqR3z33thTzeNMm2gRZ" and website:
-
-                                CM = id
+                CM = id
 
     except:
         pass
 
 
-def get_owner(id: str):
+def get_owner(account: str):
 
     try:
 
-        headers = {
-            'Content-Type': 'application/json',
-        }
-
-        params = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "getAccountInfo",
-            "params": [
-                id,
-                {
-                    "encoding": "base64"
-                }
-            ]
-        }
-
-        res = requests.post(
-            'http://api.mainnet-beta.solana.com/', headers=headers, json=params, timeout=5).json()
+        client = Client(sol_rpc)
+        
+        res = client.get_account_info(account)
 
         return res["result"]["value"]["owner"]
 
@@ -347,7 +309,7 @@ async def get_cm_metadata(cmid: str, prog: str):
             program_id = PublicKey(
                 "ArAA6CZC123yMJLUe4uisBEgvfuw2WEvex9iFmFCYiXv")
             
-        client = AsyncClient("https://api.mainnet-beta.solana.com")
+        client = AsyncClient(sol_rpc)
 
         provider = Provider(client, Wallet(Keypair.generate()))
         
@@ -397,6 +359,8 @@ activity = discord.Activity(
 
 client = commands.Bot(command_prefix="!", intents=intents,
                       activity=activity, status=discord.Status.online)
+
+sol_rpc = "https://api.mainnet-beta.solana.com"
 
 CHANNEL_ID = 946076013018898530
 

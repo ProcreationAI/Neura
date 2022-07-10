@@ -18,6 +18,8 @@ import requests
 from bs4 import BeautifulSoup
 from base58 import b58decode, b58encode
 from base64 import b64decode, b64encode
+import borsh
+from borsh import types as btypes
 
 from solana.rpc.api import Client
 from solana.rpc import types
@@ -140,7 +142,7 @@ def get_sol_wallets():
 
                             tasks = int(tasks)
 
-                            if mode in [1, 2, 9, 11]:
+                            """ if mode in [1, 2, 9, 11]:
                                     
                                 if tasks > max_tasks:
 
@@ -148,7 +150,7 @@ def get_sol_wallets():
 
                                 elif tasks < min_tasks:
                                     
-                                    tasks = min_tasks
+                                    tasks = min_tasks """
                                 
                             wallets.append(
 
@@ -578,7 +580,7 @@ def send_me_tx(privkey: str, rpc: str, blockhash: Blockhash, status: str):
 
 
 def check_cmid(cmid: str):
-
+    
     global CM
     
     try:
@@ -587,39 +589,35 @@ def check_cmid(cmid: str):
         
         res = client.get_account_info(pubkey=cmid)
 
-        if res:
+        owner = res["result"]["value"]["owner"]
+        data = res["result"]["value"]["data"][0]
 
-            if not res.get("error") and res.get("result"):
+        data = str(b64decode(data))
 
-                if res["result"].get("value"):
+        not_honeypot = re.search("(?P<url>https?://[^\s]+)", data)
 
-                    if res["result"]["value"].get("owner") and res["result"]["value"].get("data"):
-
-                        owner = res["result"]["value"]["owner"]
-                        data = res["result"]["value"]["data"][0]
-
-                        data = str(b64decode(data))
-
-                        website = re.search("(?P<url>https?://[^\s]+)", data)
-
-                        if owner == SolanaPrograms.CMV2_PROGRAM:
-                            
-                            if website:
-                                
-                                CM = cmid
-                                
-                                return SolanaPrograms.CMV2_PROGRAM
-                            
-                        elif owner == SolanaPrograms.LMN_PROGRAM:
-                            
-                            CM = cmid
-                            
-                            return SolanaPrograms.LMN_PROGRAM
-    except:
+        if owner == SolanaPrograms.CMV2_PROGRAM and not_honeypot:
+            
+            CM = cmid
+                                                            
+            return SolanaPrograms.CMV2_PROGRAM
+            
+        elif owner == SolanaPrograms.LMN_PROGRAM:
+            
+            CM = cmid
+                                        
+            return SolanaPrograms.LMN_PROGRAM
         
-        pass
-
-    return None
+        elif owner == SolanaPrograms.ML_PROGRAM:
+            
+            CM = cmid
+                                        
+            return SolanaPrograms.ML_PROGRAM
+    except Exception as e:
+        
+        print(e)
+        exit()
+        return None
 
 def get_lmn_candy_machine(url: str):
     
@@ -797,11 +795,49 @@ def get_ml_candy_machine(url: str):
                             key, value = acc.split(":")
                             
                             accs[key] = re.sub('[\W_]+', '', value)
-                            
-                    return accs
+                    
+                    if accs:
+                        
+                        config_key = accs["REACT_APP_CONFIG_KEY"]
+                        
+                        client = Client(sol_rpc)
+                        
+                        res = client.get_account_info(config_key)
+                        
+                        data = res["result"]["value"]["data"][0]
+                        
+                        schema = {
+                            "z": btypes.string,
+                            "a": btypes.string,
+                            "b": btypes.u32,
+                            "c": btypes.u32,
+                            "d": btypes.u64,
+                            "e": btypes.string,
+                            "f": btypes.u16,
+                            "g": btypes.fixed_array(btypes.u8, 32),
+                            "h": btypes.fixed_array(btypes.u8, 32),
+                            "i": btypes.u16,
+                            "j": btypes.u64,
+                            "k": btypes.fixed_array(btypes.u8, 32),
+                            "l": btypes.u32,
+                            "collectionKey": btypes.fixed_array(btypes.u8, 32),
+                            "n": btypes.fixed_array(btypes.u8, 32),
+                            "o": btypes.u16,
+                            "p": btypes.u64,
+                            "q": btypes.fixed_array(btypes.u8, 32)
+                        }
+                        
+                        deserialized = borsh.deserialize(schema=schema, data=b64decode(data))
+                        
+                        accs["REACT_APP_COLLECTION_KEY"] = deserialized["collectionKey"]
+                        
+                        return accs
+                    
     except:
         
-        return None
+        pass
+    
+    return None
 
 
 def get_ml_items_redeemed(index_key: str):
@@ -4474,9 +4510,9 @@ while True:
                                     
                             if user_cmid:
                                 
-                                if mode in [1,9]:
+                                if mode in [1,9,11]:
                                         
-                                    program = check_cmid(user_cmid)
+                                    program = check_cmid(user_cmid["REACT_APP_CONFIG_KEY"] if mode == 11 else user_cmid)
                                     
                                     if program:
                                         
@@ -4490,10 +4526,10 @@ while True:
                                             CM = user_cmid
                                             PROGRAM = program
                                             
-                                elif mode == 11:
-                                    
-                                    CM = user_cmid
-                                    PROGRAM = SolanaPrograms.ML_PROGRAM
+                                        elif mode == 11 and program == SolanaPrograms.ML_PROGRAM:
+                                            
+                                            CM = user_cmid
+                                            PROGRAM = SolanaPrograms.ML_PROGRAM
                                     
                     if CM:
 

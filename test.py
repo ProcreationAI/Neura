@@ -199,48 +199,58 @@ def get_me_collection_metadata(symbol: str):
         
     return None
  
- 
-start_tls() 
+
+def get_account_last_txs(account: str, limit: int, commitment: str, until: str = None):
+
+    try:
+        
+        client = Client(sol_rpc)
+        
+        tx = client.get_signatures_for_address(account=account, limit=limit, commitment=Commitment(commitment), until=until)["result"]
+
+        return tx
+
+    except:
+                
+        return None
+    
 sol_rpc = "https://thrumming-damp-shadow.solana-mainnet.quiknode.pro/362bbea5917e5ec837d4e76ffe9aafcc1d22a44c/"
+sol_rpc = "http://142.132.134.62:8899/"
 
 client = Client(sol_rpc)
 
 
-me = SolWalletManager(
+me = MagicEden(
     rpc=sol_rpc,
-    privkey="Xg6Ufrx89Bgpa1GyFjQWALZK36xPTymzyb9sWe3NgCt3Jw3DsAtq8QDCXP3VRW95HH9MUXkAF2Dg8vCi6ncMSgo"
+    privkey="59c95GpudN8Ks6UJDDHAmJ59yhTVFz74Fh2SbtfbtxfVEtEn2H1KxbQZEMydRwbqBmBdEdrB22ZW9YxZNXqiWZFX"
 )
-a = client.get_account_info("2gMo2Qtqa83GyhA9uQmoB9wbyjFhNYrd1L4izGCsbEo3")
+i = 10
+until_tx = None
+recent_txs = []
 
-data = "BAAAADAuMDYVAAAASHlwZSBQcmltYXRlcyBFbWJhc3N5BAAAAEhZUEVzBAAAAAAAAEkAAABodHRwczovL21vbmtlbGFicy5ueWMzLmRpZ2l0YWxvY2VhbnNwYWNlcy5jb20vaHlwZS1wcmltYXRlcy1lbWJhc3N5L2pzb24vsxVncTNP5lHi8OhzVQbmtxEG0DZjAbjyR0Fgz0XW0zmAPqy3viVxdjzlyJLgRRT+4sdeFjzBFu3YgeSUx/NF7scsAQBzBAAAAAAAAN6ZUX59w3onLMVVrh+xFCnpVzPD/eMYVbjNxQ6fepZArCYAABFwDeYqJxiSLjhJBOQ6U7uSS9UJt1nOvV6ul5DofWGjXx2usr/wn1pusyr85kEvYKYLVUcBi3FhByGbznXtO1JkAAEAAAAAAAAAAQt4zsDxKuQERqhTI9f9WwjmowS2g9XMzd6olKUcu/gMAgAAAJC/xWIAlDV3AAAAAAQAAABNYWluBAEAAAAAAAABOYzILfoAsmmYebjeKHZ4N0PGzzogHh13WP4lgytDp7yvG8tiAJQ1dwAAAAAWAAAASFlQRTogUHJpbWF0ZXMgRW1iYXNzeQoBAAAAAAAAABUAAABIeXBlIFByaW1hdGVzIEVtYmFzc3kAAAAAAAAAAAAARW1iYXNzeQAAAAAAAAAAAYCWmAAAAAAAARQAAAABAJQ1dwAAAAABBQAAAERVVENIABUAAABIeXBlIFByaW1hdGVzIEVtYmFzc3kAAAAAAAAAAAGAlpgAAAAAAAEUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+while i:
+        
+    last_txs = get_account_last_txs(
+        account="1BWutmTvYPwDtmw9abTkS4Ssr8no61spGAvW1X6NDix", 
+        limit=10, 
+        commitment="confirmed",
+        until=until_tx
+    )
+    
+    if last_txs:
+            
+        for a in last_txs:
+            
+            if a["signature"] not in recent_txs:
+                
+                recent_txs.append(a["signature"])
+                our_time = int(time.time())
+                me_time = a["blockTime"]
+                tx = a["signature"]
+                
+                print(f"our time: {our_time} | ME time: {me_time} | tx: {tx}")
+                
+        until_tx = last_txs[0]["signature"]
+        i -= 1
 
-import borsh
-
-from borsh import types
-
-
-schema = {
-    "z": types.string,
-    "a": types.string,
-    "b": types.u32,
-    "c": types.u32,
-    "d": types.u64,
-    "e": types.string,
-    "f": types.u16,
-    "g": types.fixed_array(types.u8, 32),
-    "h": types.fixed_array(types.u8, 32),
-    "i": types.u16,
-    "j": types.u64,
-    "k": types.fixed_array(types.u8, 32),
-    "l": types.u32,
-    "m": types.fixed_array(types.u8, 32),
-    "n": types.fixed_array(types.u8, 32),
-
-
-}
-print(list(bytes(b58decode("2B52sUmgGeTLc1Cw3yijHtL5Zxhe8uWQJCSNFcFPh1xE"))))
-des = borsh.deserialize(schema=schema, data=base64.b64decode(data))
-print(des)
-a = des["o"]
-
-print(b58encode(bytes(a)))
+        print("="*50)

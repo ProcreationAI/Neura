@@ -145,8 +145,7 @@ class SolWalletManager():
                     account=token_ata,
                     dest=self.payer.public_key,
                     owner=self.payer.public_key,
-                    signers=[
-                    ]
+                    signers=[]
                 )
             )
         )
@@ -162,7 +161,8 @@ class SolWalletManager():
             return None
         
         
-        
-        
+if __name__ == "__main__":
+    
+    SolWalletManager()
         
         

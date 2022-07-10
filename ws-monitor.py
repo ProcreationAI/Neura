@@ -8,12 +8,8 @@ def on_message(ws, message):
     block_txs = json.loads(message)["params"]["result"]["value"]["block"]["transactions"]
 
     for tx in block_txs:
-
-        listing_data = MagicEden.check_tx_is_listing_2(tx)
         
-        if listing_data:
-            
-            print(listing_data)
+      print(tx)
 
 
 def on_error(ws, message):

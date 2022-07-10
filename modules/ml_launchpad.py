@@ -26,6 +26,7 @@ USDC_COIN = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 ML_PROGRAM = 'minwAEdewYNqagUwzrVBUGWuo277eeSMwEwj76agxYd'
 ML_AUTH = "mnKzuL9RMtR6GeSHBfDpnQaefcMsiw7waoTSduKNiXM"
 ML_WALLET = "7FHzVCP9eX6zmZjw3qwvmdDMhSvCkLxipQatAqhtbVBf"
+ML_USDC_ATA = "Gdq32GtxXRr9t3BScA6VdtKZ7TFu62d6HBhrNFMZNto9"
 
 OPTS = TxOpts(skip_preflight=True, skip_confirmation=False, preflight_commitment=Commitment("confirmed"))
 
@@ -51,8 +52,6 @@ class MonkeLabsLaunchpad():
         
         mint_account = Keypair.generate()
         payer_ata = get_associated_token_address(owner=self.payer.public_key, mint=mint_account.public_key)
-
-        keys = []
         
         data = "003057050000000000"
 
@@ -61,7 +60,7 @@ class MonkeLabsLaunchpad():
         
         self.transaction.add(
             TransactionInstruction(
-                keys=keys,
+                keys=[],
                 data=data,
                 program_id=PublicKey(COMPUTE_BUDGET_PROGRAM)
             )
@@ -69,7 +68,7 @@ class MonkeLabsLaunchpad():
         
         keys = [
             AccountMeta(pubkey=self.payer.public_key, is_signer=True, is_writable=True),
-            AccountMeta(pubkey=mint_account.public_key, is_signer=True, is_writable=False),
+            AccountMeta(pubkey=mint_account.public_key, is_signer=True, is_writable=True),
             AccountMeta(pubkey=payer_ata, is_signer=False, is_writable=True),
             AccountMeta(pubkey=PublicKey(TOKEN_PROGRAM_ID), is_signer=False, is_writable=False),
             AccountMeta(pubkey=PublicKey(ASSOCIATED_TOKEN_ID), is_signer=False, is_writable=False),
@@ -90,7 +89,7 @@ class MonkeLabsLaunchpad():
             )
         )
         
-        METADATA = PublicKey.find_program_address(
+        MINT_METADATA = PublicKey.find_program_address(
             seeds=[
                 'metadata'.encode('utf-8'),
                 bytes(PublicKey(METADATA_PROGRAM_ID)),
@@ -119,7 +118,7 @@ class MonkeLabsLaunchpad():
             program_id=PublicKey(ML_PROGRAM)
         )
 
-        EDITION = PublicKey.find_program_address(
+        MINT_EDITION = PublicKey.find_program_address(
             seeds=[
                 'metadata'.encode('utf-8'),
                 bytes(PublicKey(METADATA_PROGRAM_ID)),
@@ -147,32 +146,51 @@ class MonkeLabsLaunchpad():
             program_id=PublicKey(ML_PROGRAM)
         )
         
+        COLLECTION_EDITION = PublicKey.find_program_address(
+            seeds=[
+                'metadata'.encode('utf-8'),
+                bytes(PublicKey(METADATA_PROGRAM_ID)),
+                bytes(PublicKey(self.accounts["REACT_APP_COLLECTION_KEY"])),
+                'edition'.encode('utf-8')
+            ],
+            program_id=PublicKey(METADATA_PROGRAM_ID)
+        )
+
+        COLLECTION_METADATA = PublicKey.find_program_address(
+            seeds=[
+                'metadata'.encode('utf-8'),
+                bytes(PublicKey(METADATA_PROGRAM_ID)),
+                bytes(PublicKey(self.accounts["REACT_APP_COLLECTION_KEY"])),
+            ],
+            program_id=PublicKey(METADATA_PROGRAM_ID)
+        )
+        
+
         keys = [
             AccountMeta(pubkey=self.payer.public_key, is_signer=True, is_writable=True),
             AccountMeta(pubkey=PublicKey(self.accounts["REACT_APP_CONFIG_KEY"]), is_signer=False, is_writable=True),
             AccountMeta(pubkey=PublicKey(self.accounts["REACT_APP_PRIMARY_WALLET"]), is_signer=False, is_writable=True),
             AccountMeta(pubkey=PublicKey(ML_AUTH), is_signer=False, is_writable=True),
             AccountMeta(pubkey=PublicKey(self.accounts["REACT_APP_INDEX_KEY"]), is_signer=False, is_writable=True),
-            AccountMeta(pubkey=PublicKey(self.accounts["REACT_APP_WHITELIST_KEY"]), is_signer=False, is_writable=False),
-            AccountMeta(pubkey=payer_ata, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=PublicKey(self.accounts["REACT_APP_WHITELIST_KEY"] or Keypair.generate().public_key), is_signer=False, is_writable=False),
+            AccountMeta(pubkey=payer_ata, is_signer=False, is_writable=False),
             AccountMeta(pubkey=PublicKey(SYSTEM_PROGRAM_ID), is_signer=False, is_writable=False),
-            AccountMeta(pubkey=PublicKey(self.accounts["REACT_APP_WHITELIST_KEY"]), is_signer=False, is_writable=False),
-            AccountMeta(pubkey=METADATA[0], is_signer=False, is_writable=True),
-            AccountMeta(pubkey=mint_account.public_key, is_signer=True, is_writable=True),
+            AccountMeta(pubkey=MINT_METADATA[0], is_signer=False, is_writable=True),
+            AccountMeta(pubkey=mint_account.public_key, is_signer=False, is_writable=False),
             AccountMeta(pubkey=PublicKey(METADATA_PROGRAM_ID), is_signer=False, is_writable=False),
             AccountMeta(pubkey=PublicKey(SYSTEM_RENT_PROGRAM), is_signer=False, is_writable=False),
             AccountMeta(pubkey=PublicKey(SYSTEM_INSTRUCTIONS_PROGRAM), is_signer=False, is_writable=False),
             AccountMeta(pubkey=PublicKey(TOKEN_PROGRAM_ID), is_signer=False, is_writable=False),
             AccountMeta(pubkey=PAYER_AUTH[0], is_signer=False, is_writable=True),
             AccountMeta(pubkey=LTIME[0], is_signer=False, is_writable=True),
-            AccountMeta(pubkey=EDITION[0], is_signer=False, is_writable=True),
-
+            AccountMeta(pubkey=MINT_EDITION[0], is_signer=False, is_writable=True),
+            AccountMeta(pubkey=PublicKey(ML_WALLET), is_signer=False, is_writable=False),
             AccountMeta(pubkey=PublicKey(USDC_COIN), is_signer=False, is_writable=False),
-            AccountMeta(pubkey=PublicKey(USDC_ATA), is_signer=False, is_writable=False),
-            AccountMeta(pubkey=PublicKey("Gdq32GtxXRr9t3BScA6VdtKZ7TFu62d6HBhrNFMZNto9"), is_signer=False, is_writable=True),
-            
-            
-            
+            AccountMeta(pubkey=USDC_ATA[0], is_signer=False, is_writable=False),
+            AccountMeta(pubkey=PublicKey(ML_USDC_ATA), is_signer=False, is_writable=False),
+            AccountMeta(pubkey=PublicKey(self.accounts["REACT_APP_COLLECTION_KEY"]), is_signer=False, is_writable=False),
+            AccountMeta(pubkey=COLLECTION_EDITION[0], is_signer=False, is_writable=False),
+            AccountMeta(pubkey=COLLECTION_METADATA[0], is_signer=False, is_writable=False),
             AccountMeta(pubkey=PROGRAM_AUTH[0], is_signer=False, is_writable=True),
         ]
         
@@ -188,7 +206,20 @@ class MonkeLabsLaunchpad():
                 program_id=PublicKey(ML_PROGRAM)
             )
         )
+
+        data = "fa"
+
+        encoded_data = b58encode(bytes.fromhex(data))
+        data = b58decode(encoded_data)
         
+        self.transaction.add(
+            TransactionInstruction(
+                keys=[],
+                data=data,
+                program_id=PublicKey(ML_PROGRAM)
+            )
+        )
+
         self.signers = [
             self.payer,
             mint_account
@@ -196,7 +227,6 @@ class MonkeLabsLaunchpad():
 
     def send_transaction(self):
 
-        try:
             
             self.transaction.sign(*self.signers)
             
@@ -206,13 +236,7 @@ class MonkeLabsLaunchpad():
 
             return tx_hash
 
-        except UnconfirmedTxError:
 
-            return None
-
-        except:
-
-            return False
 
 
 if __name__ == "__main__":

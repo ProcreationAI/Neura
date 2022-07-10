@@ -299,6 +299,8 @@ class CandyMachinev2():
             return None
 
         except Exception as e:
+            
+            print(e)
 
             return False
 
