@@ -253,7 +253,9 @@ def get_me_highest_attribute_floor(symbol:str, nft_attributes: list) -> int | No
     return None
 
 
-print(get_me_highest_attribute_floor("okay_bears", []))
+a = client.get_signature_statuses(["3VVXFxcmaJx1Bb7bSv3tejYyZgWysupo1uQbw561WEhqEvTapydMD2tZWgLbknoafFkQQHdwptqtZEqAjXid1Gen"], search_transaction_history=True)
+
+print(json.dumps(a, indent=3))
 """ i = 10
 until_tx = None
 recent_txs = []

@@ -220,15 +220,23 @@ class MonkeLabsLaunchpad():
 
     def send_transaction(self):
 
+        try:
             
             self.transaction.sign(*self.signers)
             
             tx = self.transaction.serialize()
 
             tx_hash = self.client.send_raw_transaction(tx, OPTS)['result']
-
+            
             return tx_hash
 
+        except UnconfirmedTxError:
+
+            return None
+
+        except:
+            
+            return False
 
 
 
