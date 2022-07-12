@@ -171,21 +171,6 @@ class CandyMachinev2():
             keys.append(AccountMeta(pubkey=PublicKey(whitelist_associated_acc), is_signer=False, is_writable=True))
             keys.append(AccountMeta(pubkey=PublicKey(self.whitelist_mint), is_signer=False, is_writable=True))
 
-            if int(time.time()) < self.go_live_date:
-
-                self.transaction.add(
-                    approve(
-                        ApproveParams(
-                            program_id=PublicKey(TOKEN_PROGRAM_ID),
-                            source=whitelist_associated_acc,
-                            delegate=whitelist_burn.public_key,
-                            owner=self.payer.public_key,
-                            amount=1,
-                            signers=[]
-                        )
-                    )
-                )
-
         self.transaction.add(
             TransactionInstruction(
                 keys=keys,

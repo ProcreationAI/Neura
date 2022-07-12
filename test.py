@@ -224,7 +224,37 @@ me = MagicEden(
     rpc=sol_rpc,
     privkey="59c95GpudN8Ks6UJDDHAmJ59yhTVFz74Fh2SbtfbtxfVEtEn2H1KxbQZEMydRwbqBmBdEdrB22ZW9YxZNXqiWZFX"
 )
-i = 10
+
+start_tls()
+
+
+def get_me_highest_attribute_floor(symbol:str, nft_attributes: list) -> int | None:
+            
+    collection_attributes  = MagicEden.get_collection_attributes(symbol=symbol)
+
+    if collection_attributes:
+        
+        highest_floor = 0
+
+        for nattr in nft_attributes:
+            
+            for cattr in collection_attributes:
+                
+                if nattr == cattr["attribute"]:
+                    
+                    if cattr["floor"] > highest_floor:
+                        
+                        highest_floor = cattr["floor"]
+
+        if highest_floor:
+                
+            return highest_floor
+
+    return None
+
+
+print(get_me_highest_attribute_floor("okay_bears", []))
+""" i = 10
 until_tx = None
 recent_txs = []
 
@@ -253,4 +283,4 @@ while i:
         until_tx = last_txs[0]["signature"]
         i -= 1
 
-        print("="*50)
+        print("="*50) """

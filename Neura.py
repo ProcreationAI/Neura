@@ -142,7 +142,7 @@ def get_sol_wallets():
 
                             tasks = int(tasks)
 
-                            """ if mode in [1, 2, 9, 11]:
+                            if mode in [1, 2, 9, 11]:
                                     
                                 if tasks > max_tasks:
 
@@ -150,7 +150,7 @@ def get_sol_wallets():
 
                                 elif tasks < min_tasks:
                                     
-                                    tasks = min_tasks """
+                                    tasks = min_tasks
                                 
                             wallets.append(
 
@@ -288,7 +288,7 @@ def mint(wallet: dict):
         if mode != 4:
             
             status = "[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/]".format(name, f"{i + 1}/{tasks}", show_drop_time)
-        
+
         if mode == 1:
 
             createtxT = Thread(
@@ -803,15 +803,15 @@ def get_ml_candy_machine(url: str):
                         client = Client(sol_rpc)
                         
                         res = client.get_account_info(config_key)
-                        
+
                         data = res["result"]["value"]["data"][0]
                         
                         schema = {
                             "z": btypes.string,
                             "a": btypes.string,
-                            "b": btypes.u32,
+                            "b": btypes.string,
                             "c": btypes.u32,
-                            "d": btypes.u64,
+                            "d": btypes.u32,
                             "e": btypes.string,
                             "f": btypes.u16,
                             "g": btypes.fixed_array(btypes.u8, 32),
@@ -821,10 +821,6 @@ def get_ml_candy_machine(url: str):
                             "k": btypes.fixed_array(btypes.u8, 32),
                             "l": btypes.u32,
                             "collectionKey": btypes.fixed_array(btypes.u8, 32),
-                            "n": btypes.fixed_array(btypes.u8, 32),
-                            "o": btypes.u16,
-                            "p": btypes.u64,
-                            "q": btypes.fixed_array(btypes.u8, 32)
                         }
                         
                         deserialized = borsh.deserialize(schema=schema, data=b64decode(data))
@@ -1150,6 +1146,29 @@ def create_table_launchpad(collection: dict):
     return table
 
 
+def get_me_highest_attribute_floor(symbol:str, nft_attributes: list) -> int | None:
+            
+    collection_attributes  = MagicEden.get_collection_attributes(symbol=symbol)
+
+    if collection_attributes:
+        
+        highest_floor = 0
+
+        for nattr in nft_attributes:
+            
+            for cattr in collection_attributes:
+                
+                if nattr == cattr["attribute"]:
+                    
+                    if cattr["floor"] > highest_floor:
+                        
+                        highest_floor = cattr["floor"]
+
+        if highest_floor:
+                
+            return highest_floor
+
+    return None
 
 def validate_me_purchase_results(nft_data: dict, filters: dict, min_rank: int = None, max_rank: int = None):
     
@@ -1617,7 +1636,9 @@ def monitor_me_sniper_file(file_name: str):
                     sniper_data_raw["AutoListByPrice(%)"] = float(sniper_data_raw["AutoListByPrice(%)"]) if sniper_data_raw["AutoListByPrice(%)"] else None
                         
                     sniper_data_raw["AutoListByFloor(%)"] = float(sniper_data_raw["AutoListByFloor(%)"]) if sniper_data_raw["AutoListByFloor(%)"] else None
-                        
+                    
+                    sniper_data_raw["AutoListByTrait(%)"] = float(sniper_data_raw["AutoListByTrait(%)"]) if sniper_data_raw["AutoListByTrait(%)"] else None
+                      
                     filtered_attributes = []
                     
                     if sniper_data_raw["Attributes"]:
@@ -2802,7 +2823,8 @@ while True:
                 "MaxRank",
                 "Attributes",
                 "AutoListByPrice(%)",
-                "AutoListByFloor(%)"
+                "AutoListByFloor(%)",
+                "AutoListByTrait(%)"
             ] 
             
             filters = sniper_default_filters
@@ -2932,6 +2954,7 @@ while True:
                                                 nft_name = nft_metadata["data"]["name"]
                                                 nft_creators = nft_metadata["data"]["creators"]
                                                 nft_update_auth = nft_metadata["update_authority"]
+                                                nft_uri = nft_metadata["data"]["uri"]
                                                 
                                                 to_match_identifier = "".join(nft_creators + [nft_update_auth])
                                                 
@@ -2952,6 +2975,7 @@ while True:
                                                             max_rank = collection["MaxRank"]
                                                             autolist_by_price = collection["AutoListByPrice(%)"]
                                                             autolist_by_floor = collection["AutoListByFloor(%)"]
+                                                            autolist_by_trait = collection["AutoListByTrait(%)"]
                                                             attributes = collection["Attributes"]
                                                             collection_floor = collection["Floor"]
                                                                 
@@ -2983,12 +3007,12 @@ while True:
                                                             
                                                             if attributes or (min_rank is not None and max_rank is not None):
                                                                 
-                                                                nft_to_validate_data = CoralCube.get_nft_data(mint=mint_address)
+                                                                nft_marketplace_data = CoralCube.get_nft_data(mint=mint_address)
                                                                 
-                                                                if nft_to_validate_data:
+                                                                if nft_marketplace_data:
                                                                     
                                                                     is_valid_snipe = validate_cc_purchase_results(
-                                                                        nft_to_validate_data, 
+                                                                        nft_marketplace_data, 
                                                                         filters=attributes,
                                                                         min_rank=min_rank,
                                                                         max_rank=max_rank
@@ -3055,6 +3079,20 @@ while True:
                                                                                                 
                                             listing_price = (collection_floor + (collection_floor * autolist_by_floor/100))
                                         
+                                        elif autolist_by_trait is not None:
+                                            
+                                            nft_uri_metadata = get_uri_metadata(uri=nft_uri)
+                                            
+                                            if nft_uri_metadata:
+                                                
+                                                highest_attribute_floor = get_me_highest_attribute_floor(symbol=to_match_symbol, nft_attributes=nft_uri_metadata["attributes"])
+
+                                                if highest_attribute_floor:
+                                                    
+                                                    highest_attribute_floor = lamports_to_sol(highest_attribute_floor)
+                                                    
+                                                    listing_price = highest_attribute_floor + (highest_attribute_floor * autolist_by_trait/100)
+                                                    
                                         if listing_price:
                                             
                                             listing_price = round(listing_price, 3)
@@ -4339,12 +4377,12 @@ while True:
                                                             
                                                             if attributes or (min_rank is not None and max_rank is not None):
                                                                 
-                                                                nft_to_validate_data = CoralCube.get_nft_data(mint=mint_address)
+                                                                nft_marketplace_data = CoralCube.get_nft_data(mint=mint_address)
                                                                 
-                                                                if nft_to_validate_data:
+                                                                if nft_marketplace_data:
                                                                     
                                                                     is_valid_snipe = validate_cc_purchase_results(
-                                                                        nft_to_validate_data, 
+                                                                        nft_marketplace_data, 
                                                                         filters=attributes,
                                                                         min_rank=min_rank,
                                                                         max_rank=max_rank

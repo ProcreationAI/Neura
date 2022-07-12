@@ -86,15 +86,50 @@ class MagicEden():
 
             return None
 
-    def get_listed_nfts(symbol: str, min_sol: float = 0, max_sol: float = 999999999, limit: int = 20, recenlty_listed: bool = False) -> list | None:
+
+    @staticmethod
+    def get_collection_attributes(symbol: str) -> dict | None:
+
+        try:
+
+            headers = {
+                'authority': 'api-mainnet.magiceden.io',
+                'accept': 'application/json, text/plain, */*',
+                'origin': 'https://magiceden.io',
+                'referer': 'https://magiceden.io/',
+                'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="100", "Google Chrome";v="100"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"macOS"',
+                'sec-fetch-dest': 'empty',
+                'sec-fetch-mode': 'cors',
+                'sec-fetch-site': 'same-site',
+                'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36',
+            }
+
+            payload = create_tls_payload(
+                url=f"https://api-mainnet.magiceden.io/rpc/getCollectionEscrowStats/{symbol}?edge_cache=true",
+                method="GET",
+                headers=headers
+            )
+
+            res = requests.post("http://127.0.0.1:3000",json=payload, timeout=3).json()
+
+            res = json.loads(res["body"])
+
+            return res["results"]["availableAttributes"]
+
+        except:
+
+            return None
+
+    
+
+    @staticmethod
+    def get_listed_nfts(symbol: str, min_sol: float = 0, max_sol: float = 999999999, limit: int = 20, recenlty_listed: bool = False, attributes: list = None) -> list | None:
 
         results = []
         
-        skip = limit//20
-        
-        if limit < 20:
-            
-            skip = 1
+        skip = 1 if limit < 20 else limit//20
             
         try:
             
@@ -118,6 +153,11 @@ class MagicEden():
                 
                 query["$sort"] = {"createdAt": -1} if recenlty_listed else {"takerAmount": 1}
 
+                if attributes:
+                    
+                    query['$match']["$and"] = [{"$or":[{"attributes":{"$elemMatch":{"trait_type":attribute["trait_type"],"value":attribute["value"]}}}]} for attribute in attributes]
+                    
+                    
                 query = quote(json.dumps(query))
 
                 payload = create_tls_payload(
@@ -126,8 +166,7 @@ class MagicEden():
                     headers=headers
                 )
 
-                res = requests.post("http://127.0.0.1:3000",
-                                    json=payload, timeout=5).json()
+                res = requests.post("http://127.0.0.1:3000",json=payload, timeout=5).json()
 
                 results += json.loads(res["body"])["results"]
 

@@ -129,6 +129,18 @@ def unpack_metadata_account(data):
     return metadata
 
 
+
+def get_uri_metadata(uri: str):
+    
+    try:
+        
+        return requests.get(uri).json()
+    
+    except:
+        
+        return None
+
+
 def logger(text: str):
 
     now = datetime.now()
