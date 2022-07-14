@@ -26,10 +26,13 @@ from dhooks import Webhook, Embed
 import requests
 import time
 import aiohttp
-from modules import MagicEden, OpenSea, CoralCube, SolWalletManager
-from lib import AccountClient
-from utils import *
+
+from lib.idl import AccountClient
 import subprocess
+
+from modules.magic_eden import MagicEden
+from utils.constants import *
+from utils.solana import get_nft_metadata
 
 def start_tls():
 
@@ -136,25 +139,6 @@ def validate_me_purchase_results(nft_data: dict, filters: dict, min_rank: int = 
                 
 
     return True
-  
-
-def get_nft_metadata(mint_key):
-
-    client = Client(sol_rpc)
-
-    try:
-        metadata_account = get_metadata_account(mint_key)
-
-        data = base64.b64decode(client.get_account_info(
-            metadata_account)['result']['value']['data'][0])
-
-        metadata = unpack_metadata_account(data)
-
-        return metadata
-
-    except:  
-        
-        return None
 
 
 def get_me_collection_metadata(symbol: str):
@@ -214,6 +198,64 @@ def get_account_last_txs(account: str, limit: int, commitment: str, until: str =
                 
         return None
     
+
+def get_me_highest_attribute_floor(collection_attributes: list, nft_attributes: list) -> int | None:
+            
+    highest_floor = 0
+
+    for nattr in nft_attributes:
+        
+        for cattr in collection_attributes:
+            
+            if nattr == cattr["attribute"]:
+                
+                if cattr["floor"] > highest_floor:
+                    
+                    highest_floor = cattr["floor"]
+
+    if highest_floor:
+            
+        return highest_floor
+
+    return None
+
+def send_sniper_webhook(mint: str, tx: str, price: float, sniping_time: float, webhook: str):
+    
+    nft_data = MagicEden.get_nft_data(mint=mint)
+    
+    if nft_data:
+        
+        name = nft_data["title"]
+        img = nft_data["img"]
+        url = f"https://magiceden.io/item-details/{mint}"
+        tx_url = f"https://explorer.solana.com/tx/{tx}"
+        
+        embed = Embed(
+            timestamp="now"
+        )
+        
+        embed.color = Discord.EMBED_COLOR
+        embed.description = "`SUCCESSFUL SNIPE`"
+        
+        embed.set_title(name, url)
+        embed.set_thumbnail(img)
+        embed.set_footer(Discord.EMBED_FOOTER_TXT, Discord.EMBED_FOOTER_IMG)
+        
+        embed.add_field("**Price**", f"{price} SOL", inline=False)
+        embed.add_field("**Speed**", f"{sniping_time} s", inline=False)
+        embed.add_field("**Transaction**", f"[Explorer]({tx_url})", inline=False)
+        
+        try:
+            
+            return Webhook(webhook).send(embed=embed)
+        
+        except:
+            
+            pass
+            
+    return None
+
+
 sol_rpc = "https://thrumming-damp-shadow.solana-mainnet.quiknode.pro/362bbea5917e5ec837d4e76ffe9aafcc1d22a44c/"
 sol_rpc = "http://142.132.134.62:8899/"
 
@@ -225,37 +267,11 @@ me = MagicEden(
     privkey="59c95GpudN8Ks6UJDDHAmJ59yhTVFz74Fh2SbtfbtxfVEtEn2H1KxbQZEMydRwbqBmBdEdrB22ZW9YxZNXqiWZFX"
 )
 
-start_tls()
 
+a = me.get_collection_attributes("trippincettribe")
 
-def get_me_highest_attribute_floor(symbol:str, nft_attributes: list) -> int | None:
-            
-    collection_attributes  = MagicEden.get_collection_attributes(symbol=symbol)
+print(a)
 
-    if collection_attributes:
-        
-        highest_floor = 0
-
-        for nattr in nft_attributes:
-            
-            for cattr in collection_attributes:
-                
-                if nattr == cattr["attribute"]:
-                    
-                    if cattr["floor"] > highest_floor:
-                        
-                        highest_floor = cattr["floor"]
-
-        if highest_floor:
-                
-            return highest_floor
-
-    return None
-
-
-a = client.get_signature_statuses(["3VVXFxcmaJx1Bb7bSv3tejYyZgWysupo1uQbw561WEhqEvTapydMD2tZWgLbknoafFkQQHdwptqtZEqAjXid1Gen"], search_transaction_history=True)
-
-print(json.dumps(a, indent=3))
 """ i = 10
 until_tx = None
 recent_txs = []

@@ -48,10 +48,10 @@ embed.add_field(name="**MonkeLabs minting** :monkey_face:", value=value, inline=
 
 value = """
 - Blockchain based 
-- Snipe by price or floor price %
-- Add ranks 
+- Filtered sniping (max and min price, floor %)
+- Add ranks
 - Add attributes 
-- Auto-lister by price or floor price %
+- Auto-lister (sniped price %, floor price %, highest trait %)
 - In-time floor monitor
 - Multiple collections
 """
@@ -73,7 +73,8 @@ value = """
 - Mass listing 
 - Mass delisting 
 - Funds transfer 
-- NFT transfer 
+- NFT transfer
+- NFT burner
 """
 embed.add_field(name="**Solana wallets manager** :briefcase:", value=value, inline=False)
 
@@ -94,7 +95,7 @@ value = """
 embed.add_field(name="**Alpha group opportunites** :sparkles:", value=value, inline=False)
 
 value = """
-- Soon
+- Currently on beta testing for holders
 """
 embed.add_field(name="**Custom RPC node** :zap:", value=value, inline=False)
 

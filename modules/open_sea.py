@@ -2,8 +2,10 @@ from web3 import Web3
 import json
 from web3.types import Wei
 from web3.contract import Contract
+import requests
 
-from utils import *
+from utils.bypass import create_tls_payload
+from utils.constants import *
 
 class OpenSea():
 

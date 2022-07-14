@@ -1,1 +1,1 @@
-from .idl import AccountClient
+"""Rebuilt AccountClient class to interact with the IDL of custom Solana programs"""

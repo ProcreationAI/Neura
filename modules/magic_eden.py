@@ -12,8 +12,10 @@ from solana.rpc.commitment import Commitment
 from solana.blockhash import Blockhash
 from rich.console import Console
 from solana.rpc.core import UnconfirmedTxError
+from urllib.parse import quote
 
-from utils.helpers import *
+from utils.bypass import create_tls_payload
+from utils.solana import get_lamports_from_listing_data, sol_to_lamports, lamports_to_sol
 
 TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
 TOKEN_METADATA_ID = 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
@@ -280,14 +282,14 @@ class MagicEden():
         return None
 
 
-    def list_nft(self, seller: str, mint: str, price: int) -> str | None:
+    def list_nft(self, mint: str, price: int) -> str | None:
         
         OPTS = TxOpts(skip_preflight=True, skip_confirmation=True)
 
         price = lamports_to_sol(price)
         
         token_ata = get_associated_token_address(
-            owner=PublicKey(seller),
+            owner=self.payer.public_key,
             mint=PublicKey(mint)
         )
         
@@ -342,14 +344,14 @@ class MagicEden():
 
         return None
 
-    def delist_nft(self, seller: str, mint: str, price: int) -> str | None:
+    def delist_nft(self, mint: str, price: int) -> str | None:
 
         OPTS = TxOpts(skip_preflight=True, skip_confirmation=True)
 
         price = lamports_to_sol(price)
         
         token_ata = get_associated_token_address(
-            owner=PublicKey(seller),
+            owner=self.payer.public_key,
             mint=PublicKey(mint)
         )
 

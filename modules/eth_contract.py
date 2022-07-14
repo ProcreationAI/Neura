@@ -5,7 +5,7 @@ import time
 from threading import Thread
 from rich.console import Console
 
-from utils.helpers import *
+from utils.bot import logger
 
 console = Console(highlight=False, log_path=False)
 

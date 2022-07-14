@@ -20,6 +20,7 @@ from base58 import b58decode, b58encode
 from base64 import b64decode, b64encode
 import borsh
 from borsh import types as btypes
+from dhooks import Embed, Webhook
 
 from solana.rpc.api import Client
 from solana.rpc import types
@@ -45,11 +46,13 @@ from modules import (
     SolWalletManager
 )
 
-from lib import (
-    AccountClient
-)
+from lib.idl import AccountClient
 
-from utils import *
+from utils.constants import *
+from utils.bot import logger, get_config
+from utils.bypass import create_tls_payload
+from utils.solana import sol_to_lamports, lamports_to_sol, get_uri_metadata, get_nft_metadata
+
 
 def get_eth_wallets():
 
@@ -579,6 +582,42 @@ def send_me_tx(privkey: str, rpc: str, blockhash: Blockhash, status: str):
         commits += 1
 
 
+def send_sniper_webhook(mint: str, tx: str, price: float, sniping_time: float, webhook: str):
+    
+    nft_data = MagicEden.get_nft_data(mint=mint)
+    
+    if nft_data:
+        
+        name = nft_data["title"]
+        img = nft_data["img"]
+        url = f"https://magiceden.io/item-details/{mint}"
+        tx_url = f"https://explorer.solana.com/tx/{tx}"
+        
+        embed = Embed(
+            timestamp="now"
+        )
+        
+        embed.color = Discord.EMBED_COLOR
+        embed.description = "`SUCCESSFUL SNIPE`"
+        
+        embed.set_title(name, url)
+        embed.set_thumbnail(img)
+        embed.set_footer(Discord.EMBED_FOOTER_TXT, Discord.EMBED_FOOTER_IMG)
+        
+        embed.add_field("**Price**", f"{price} SOL")
+        embed.add_field("**Sniped in**", f"{sniping_time} s")
+        embed.add_field("**Transaction**", f"[Explorer]({tx_url})")
+        
+        try:
+            
+            return Webhook(webhook).send(embed=embed)
+        
+        except:
+            
+            pass
+            
+    return None
+
 def check_cmid(cmid: str):
     
     global CM
@@ -613,10 +652,9 @@ def check_cmid(cmid: str):
             CM = cmid
                                         
             return SolanaPrograms.ML_PROGRAM
-    except Exception as e:
         
-        print(e)
-        exit()
+    except:
+        
         return None
 
 def get_lmn_candy_machine(url: str):
@@ -991,26 +1029,6 @@ def get_wallet_nfts(wallet: str):
         return None
 
 
-
-def get_nft_metadata(mint_key):
-
-    client = Client(sol_rpc)
-
-    try:
-        metadata_account = get_metadata_account(mint_key)
-
-        data = b64decode(client.get_account_info(
-            metadata_account)['result']['value']['data'][0])
-
-        metadata = unpack_metadata_account(data)
-
-        return metadata
-
-    except:  
-        
-        return None
-
-
 def get_collection_pda_account(cmid: str):
     
     return str(PublicKey.find_program_address(
@@ -1146,30 +1164,6 @@ def create_table_launchpad(collection: dict):
     return table
 
 
-def get_me_highest_attribute_floor(symbol:str, nft_attributes: list) -> int | None:
-            
-    collection_attributes  = MagicEden.get_collection_attributes(symbol=symbol)
-
-    if collection_attributes:
-        
-        highest_floor = 0
-
-        for nattr in nft_attributes:
-            
-            for cattr in collection_attributes:
-                
-                if nattr == cattr["attribute"]:
-                    
-                    if cattr["floor"] > highest_floor:
-                        
-                        highest_floor = cattr["floor"]
-
-        if highest_floor:
-                
-            return highest_floor
-
-    return None
-
 def validate_me_purchase_results(nft_data: dict, filters: dict, min_rank: int = None, max_rank: int = None):
     
     if filters:
@@ -1254,6 +1248,26 @@ def validate_cc_purchase_results(nft_data: dict, filters: dict, min_rank: int, m
                 
     return True
 
+def get_me_highest_attribute_floor(collection_attributes: list, nft_attributes: list) -> int | None:
+            
+    highest_floor = 0
+
+    for nattr in nft_attributes:
+        
+        for cattr in collection_attributes:
+            
+            if nattr == cattr["attribute"]:
+                
+                if cattr["floor"] > highest_floor:
+                    
+                    highest_floor = cattr["floor"]
+
+    if highest_floor:
+            
+        return highest_floor
+
+    return None
+
 def check_marketplace_url(url):
 
     split_url = urlsplit(url)
@@ -1306,7 +1320,7 @@ def get_me_collection_metadata(symbol: str):
         
         mint = last_listed["mintAddress"]
         
-        nft_metadata = get_nft_metadata(mint_key=mint)
+        nft_metadata = get_nft_metadata(mint_key=mint, rpc=sol_rpc)
         
         if nft_metadata:
             
@@ -1348,7 +1362,7 @@ def get_cc_collection_metadata(symbol: str):
         
         mint = last_listed["mint"]
         
-        nft_metadata = get_nft_metadata(mint_key=mint)
+        nft_metadata = get_nft_metadata(mint_key=mint, rpc=sol_rpc)
         
         if nft_metadata:
             
@@ -1636,9 +1650,7 @@ def monitor_me_sniper_file(file_name: str):
                     sniper_data_raw["AutoListByPrice(%)"] = float(sniper_data_raw["AutoListByPrice(%)"]) if sniper_data_raw["AutoListByPrice(%)"] else None
                         
                     sniper_data_raw["AutoListByFloor(%)"] = float(sniper_data_raw["AutoListByFloor(%)"]) if sniper_data_raw["AutoListByFloor(%)"] else None
-                    
-                    sniper_data_raw["AutoListByTrait(%)"] = float(sniper_data_raw["AutoListByTrait(%)"]) if sniper_data_raw["AutoListByTrait(%)"] else None
-                      
+                                          
                     filtered_attributes = []
                     
                     if sniper_data_raw["Attributes"]:
@@ -1669,7 +1681,6 @@ def monitor_me_sniper_file(file_name: str):
         sniper_data = collections
             
         time.sleep(0.5)
-
 
 
 def monitor_cc_sniper_file(file_name: str):
@@ -2192,7 +2203,7 @@ def get_range_to_operate(operation: str, wallet_to_operate: int = None):
 
             if nfts == "e":
 
-                return "e"
+                return None
 
             if bool(re.compile(r'[^0-9-,]').search(nfts)):
 
@@ -2285,7 +2296,7 @@ def get_balance_to_transfer(wallet: int):
 
             if balance == "e":
 
-                return "e"
+                return None
 
             balance = int(sol_to_lamports(float(balance)))
 
@@ -2317,7 +2328,7 @@ def get_wallet_to_transfer():
 
             if wallet == "e":
 
-                return "e"
+                return None
 
             wallet = int(wallet)
 
@@ -2343,7 +2354,7 @@ def get_listing_price():
 
             if price == "e":
 
-                return "e"
+                return None
 
             return float(price)
 
@@ -2492,6 +2503,8 @@ set_app_title(f"Neura - {Bot.VERSION}")
 console = Console(highlight=False, log_path=False)
 
 try:
+    
+    import helheim
     
     helheim.auth(Keys.CF_API_KEY)
     
@@ -2823,8 +2836,7 @@ while True:
                 "MaxRank",
                 "Attributes",
                 "AutoListByPrice(%)",
-                "AutoListByFloor(%)",
-                "AutoListByTrait(%)"
+                "AutoListByFloor(%)"
             ] 
             
             filters = sniper_default_filters
@@ -2937,6 +2949,8 @@ while True:
                                         
                                         console.print(logger(f"{status} [yellow]Fetching new data...[/]"))
 
+                                        start_time = time.time()
+                                        
                                         listing_info = magic_eden.check_tx_is_listing(tx=signature)
                                                                                 
                                         if listing_info:
@@ -2947,7 +2961,7 @@ while True:
                                             price_in_lamports = listing_info["price"]
                                             escrow_pubkey = listing_info["escrow"]
                                             
-                                            nft_metadata = get_nft_metadata(mint_key=mint_address)
+                                            nft_metadata = get_nft_metadata(mint_key=mint_address, rpc=sol_rpc)
                                             
                                             if nft_metadata:
                                                 
@@ -2975,7 +2989,6 @@ while True:
                                                             max_rank = collection["MaxRank"]
                                                             autolist_by_price = collection["AutoListByPrice(%)"]
                                                             autolist_by_floor = collection["AutoListByFloor(%)"]
-                                                            autolist_by_trait = collection["AutoListByTrait(%)"]
                                                             attributes = collection["Attributes"]
                                                             collection_floor = collection["Floor"]
                                                                 
@@ -3057,6 +3070,10 @@ while True:
                     
                                 console.print(logger(f"{status} [yellow]Purchasing...[/]"))
 
+                                final_time = time.time()
+                                
+                                sniping_time = round(final_time - start_time, 1)
+                                
                                 tx_hash = magic_eden.buy_nft_api(
                                     seller=seller,
                                     price=price_in_lamports,
@@ -3079,20 +3096,6 @@ while True:
                                                                                                 
                                             listing_price = (collection_floor + (collection_floor * autolist_by_floor/100))
                                         
-                                        elif autolist_by_trait is not None:
-                                            
-                                            nft_uri_metadata = get_uri_metadata(uri=nft_uri)
-                                            
-                                            if nft_uri_metadata:
-                                                
-                                                highest_attribute_floor = get_me_highest_attribute_floor(symbol=to_match_symbol, nft_attributes=nft_uri_metadata["attributes"])
-
-                                                if highest_attribute_floor:
-                                                    
-                                                    highest_attribute_floor = lamports_to_sol(highest_attribute_floor)
-                                                    
-                                                    listing_price = highest_attribute_floor + (highest_attribute_floor * autolist_by_trait/100)
-                                                    
                                         if listing_price:
                                             
                                             listing_price = round(listing_price, 3)
@@ -3100,7 +3103,6 @@ while True:
                                             console.print(logger(f"{status} [yellow]Listing {nft_name}[/] [purple]>[/] [cyan]{listing_price} SOL[/]"))
                                                     
                                             tx_hash = magic_eden.list_nft(
-                                                seller=pubkey,
                                                 mint=mint_address,
                                                 price=sol_to_lamports(listing_price)
                                             )
@@ -3394,15 +3396,17 @@ while True:
                         nfts_data = []
 
                         for nft in wallet_nfts:
+                                                        
+                                if operation_type in ["l", "ts", "tn", "b"]:
+
+                                    if nft.get("collectionName") or nft["onChainCollection"].get("key"):
+                                        
+                                        nfts_data.append({"mint": nft["mintAddress"], "name": nft["title"], "token": nft["id"], "symbol": nft.get("collectionName") or nft["onChainCollection"].get("key"), "attributes": nft["attributes"]})
+
+                                elif operation_type in ["d", "u"]:
+
+                                    nfts_data.append({"mint": nft["initializerDepositTokenMintAddress"], "name": nft["title"], "token": nft["initializerDepositTokenAccount"], "price": lamports_to_sol(nft["takerAmount"])})
                             
-                            if operation_type in ["l", "ts", "tn", "b"]:
-
-                                nfts_data.append({"mint": nft["mintAddress"], "name": nft["title"], "token": nft["id"]})
-
-                            elif operation_type in ["d", "u"]:
-
-                                nfts_data.append({"mint": nft["initializerDepositTokenMintAddress"], "name": nft["title"], "token": nft["initializerDepositTokenAccount"], "price": lamports_to_sol(nft["takerAmount"])})
-                        
                         sorted_names = sorted([nft["name"] for nft in nfts_data])
 
                         sorted_nfts_data = []
@@ -3444,11 +3448,9 @@ while True:
                 wallet_nfts = wallet["nfts"]
                 wallet_balance = wallet["balance"]
 
-                console.print(
-                    "[purple] >>[/] {:<10} [green]{}[/]\n".format(f"Wallet {i}:", wallet_address))
+                console.print("[purple] >>[/] {:<10} [green]{}[/]\n".format(f"Wallet {i}:", wallet_address))
 
-                console.print(
-                    "[purple]  >[/] {:<10} [cyan]{}[/]\n".format(f"Balance:", round(lamports_to_sol(wallet_balance), 2)))
+                console.print("[purple]  >[/] {:<10} [cyan]{}[/]\n".format(f"Balance:", round(lamports_to_sol(wallet_balance), 2)))
 
                 if wallet_nfts:
 
@@ -3481,25 +3483,23 @@ while True:
 
                 raw_wallets_nfts = {}
 
-                wallets_to_operate = get_range_to_operate(
-                    operation="wallets")
+                wallets_to_operate = get_range_to_operate(operation="wallets")
 
-                if wallets_to_operate == "e":
+                if wallets_to_operate is None:
 
                     break
 
                 for i in wallets_to_operate:
 
-                    nfts_to_operate = get_range_to_operate(
-                        operation="nfts", wallet_to_operate=i)
+                    nfts_to_operate = get_range_to_operate(operation="nfts", wallet_to_operate=i)
 
                     raw_wallets_nfts[i] = nfts_to_operate
 
-                    if nfts_to_operate == "e":
+                    if nfts_to_operate is None:
 
                         break
 
-                if nfts_to_operate == "e":
+                if nfts_to_operate is None:
 
                     break
 
@@ -3513,9 +3513,11 @@ while True:
 
                     listing_price = get_listing_price()
 
-                    if listing_price == "e":
+                    if listing_price is None:
 
                         break
+                    
+                    list_by_trait = listing_price == 0.0
 
                 elif operation_type in ["d", "b"]:
                     
@@ -3531,7 +3533,7 @@ while True:
 
                     wallet_to_transfer = get_wallet_to_transfer()
 
-                    if wallet_to_transfer == "e":
+                    if wallet_to_transfer is None:
 
                         break
 
@@ -3539,10 +3541,22 @@ while True:
 
                 trs = []
 
+                current_collection = None
+                collection_attributes = None
+                
                 for wallet, nfts in raw_wallets_nfts.items():
 
                     privkey = wallets_nfts[wallet]["privkey"]
-                    pubkey = wallets_nfts[wallet]["address"]
+
+                    me_manager = MagicEden(
+                        rpc=sol_rpc,
+                        privkey=privkey
+                    )
+                    
+                    wallet_manager = SolWalletManager(
+                        rpc=sol_rpc,
+                        privkey=privkey
+                    )
                     
                     for nft in nfts:
 
@@ -3551,25 +3565,39 @@ while True:
                         name = nft_data["name"]
                         mint_address = nft_data["mint"]
                         token = nft_data["token"]
-
+                        
                         if operation_type in ["l", "u"]:
-
+                            
+                            symbol = nft_data["symbol"]
+                            attributes = nft_data["attributes"]
+                            
+                            if list_by_trait:
+                                
+                                listing_price = 0
+                                
+                                if symbol != current_collection:
+                                    
+                                    collection_attributes = MagicEden.get_collection_attributes(symbol)
+                                    
+                                if collection_attributes:
+                                    
+                                    highest_attribute_floor = get_me_highest_attribute_floor(collection_attributes, attributes)
+                                    
+                                    if highest_attribute_floor:
+                                        
+                                        listing_price = lamports_to_sol(highest_attribute_floor)
+                                    
                             if operation_type == "l":
 
-                                console.print(logger(f"[MANAGER] [cyan][OPERATION ~ List][/] [yellow]Listing {name} at {listing_price}[/]"))
+                                console.print(logger(f"[MANAGER] [cyan][OPERATION ~ List][/] [yellow]Listing {name} at {listing_price} SOL[/]"))
 
                             elif operation_type == "u":
 
-                                console.print(logger(f"[MANAGER] [cyan][OPERATION ~ Update][/] [yellow]Updating {name} price to {listing_price}[/]"))
-                            
-                            manager = MagicEden(
-                                rpc=sol_rpc,
-                                privkey=privkey
-                            )
+                                console.print(logger(f"[MANAGER] [cyan][OPERATION ~ Update][/] [yellow]Updating {name} price to {listing_price} SOL[/]"))
                             
                             operationT = Thread(
-                                target=manager.list_nft,
-                                args=[pubkey, mint_address, sol_to_lamports(listing_price)]
+                                target=me_manager.list_nft,
+                                args=[mint_address, sol_to_lamports(listing_price)]
                             )
 
                         elif operation_type == "d":
@@ -3578,14 +3606,9 @@ while True:
 
                             console.print(logger(f"[MANAGER] [cyan][OPERATION ~ Delist][/] [yellow]Delisting {name}[/]"))
                             
-                            manager = MagicEden(
-                                rpc=sol_rpc,
-                                privkey=privkey
-                            )
-                            
                             operationT = Thread(
-                                target=manager.delist_nft,
-                                args=[pubkey, mint_address, sol_to_lamports(delisting_price)]
+                                target=me_manager.delist_nft,
+                                args=[mint_address, sol_to_lamports(delisting_price)]
                             )
 
                         elif operation_type == "tn":
@@ -3593,11 +3616,6 @@ while True:
                             dest_wallet = wallets_nfts[wallet_to_transfer]["address"]
                             dest_name = wallets_nfts[wallet_to_transfer]["name"]
 
-                            wallet_manager = SolWalletManager(
-                                rpc=sol_rpc,
-                                privkey=privkey
-                            )
-                            
                             console.print(logger(f"[MANAGER] [cyan][OPERATION ~ Transfer NFT][/] [yellow]Transfering {name} to {dest_name.upper()}[/]"))
 
                             operationT = Thread(
@@ -3609,16 +3627,11 @@ while True:
                             
                             console.print(logger(f"[MANAGER] [cyan][OPERATION ~ Burn][/] [yellow]Burning {name}[/]"))
                             
-                            wallet_manager = SolWalletManager(
-                                rpc=sol_rpc,
-                                privkey=privkey
-                            )
-                            
                             operationT = Thread(
                                 target=wallet_manager.burn_nft,
                                 args=[mint_address]
                             )
-                            
+                                
                         operationT.start()
                         trs.append(operationT)
 
@@ -3636,10 +3649,9 @@ while True:
 
                 raw_wallets_balances = {}
 
-                wallets_to_operate = get_range_to_operate(
-                    operation="wallets")
+                wallets_to_operate = get_range_to_operate(operation="wallets")
 
-                if wallets_to_operate == "e":
+                if wallets_to_operate is None:
 
                     break
 
@@ -3649,17 +3661,17 @@ while True:
 
                     raw_wallets_balances[i] = balance_to_operate
 
-                    if balance_to_operate == "e":
+                    if balance_to_operate is None:
 
                         break
 
-                if balance_to_operate == "e":
+                if balance_to_operate is None:
 
                     break
                 
                 wallet_to_transfer = get_wallet_to_transfer()
 
-                if wallet_to_transfer == "e":
+                if wallet_to_transfer is None:
 
                     break
 
@@ -4319,7 +4331,7 @@ while True:
                                             price_in_sol = lamports_to_sol(listing_info["price"])
                                             price_in_lamports = listing_info["price"]
                                             
-                                            nft_metadata = get_nft_metadata(mint_key=mint_address)
+                                            nft_metadata = get_nft_metadata(mint_key=mint_address, rpc=sol_rpc)
                                             
                                             if nft_metadata:
                                                 

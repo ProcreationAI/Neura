@@ -9,7 +9,6 @@ from solana.rpc.types import TxOpts
 from solana.blockhash import Blockhash
 from solana.rpc.commitment import Commitment
 from base58 import b58decode, b58encode
-import time
 from solana.rpc.core import UnconfirmedTxError
 
 

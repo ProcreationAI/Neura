@@ -14,7 +14,7 @@ from anchorpy import Program, Wallet, Provider
 from solana.rpc.async_api import AsyncClient
 import requests
 
-from utils import create_tls_payload
+from utils.bypass import create_tls_payload
 
 TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
 METADATA_PROGRAM_ID = 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'

@@ -8,9 +8,16 @@ class SolanaEndpoints():
     
 class Bot():
     
-    VERSION = "0.17.0.0"
+    VERSION = "0.18.0.0"
     
 
+class Discord():
+    
+    SUCCESS_WH = "https://discord.com/api/webhooks/974346899521937549/p4XwuCyJv541UM_jfHOWPyDf2hyY2AeoynBKpdSVFg5vkCTOEc1x2w92A9XX0gaLd5FW"
+    EMBED_COLOR = 0x6436CB
+    EMBED_FOOTER_IMG = "https://cdn.discordapp.com/attachments/921022038074871879/981234960121856110/logo2.png"
+    EMBED_FOOTER_TXT = "Neura | NFT bot & Alpha group"
+    
 class Keys():
     
     TLS_KEY = "oLZxFnte8n5UL6ERJqBjH7tJk37jVh503RP5IIt0"
