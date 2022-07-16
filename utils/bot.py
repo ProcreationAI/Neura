@@ -40,15 +40,19 @@ def get_config(parameter: str):
 
         elif parameter == "advanced":
 
-            return str(value) == "y"
+            return str(value).lower() == "y"
             
         elif parameter == "auto_timer":
             
-            return str(value) == "y"
+            return str(value).lower() == "y"
         
         elif parameter == "await_mints":
             
             return int(value)
+        
+        elif parameter == "webhook":
+            
+            return str(value)
             
     except:
         

@@ -54,6 +54,69 @@ from utils.bypass import create_tls_payload
 from utils.solana import sol_to_lamports, lamports_to_sol, get_uri_metadata, get_nft_metadata
 
 
+def get_eth_wallets():
+
+    w3conn = Web3(Web3.HTTPProvider(eth_rpc))
+
+    wallets = []
+
+    try:
+
+        with open('eth-wallets.csv', 'r') as f:
+
+            reader = csv.reader(f)
+
+            next(reader)
+
+            task_id = 1
+
+            for wallet in reader:
+
+                if not any(data == "" for data in wallet):
+
+                    name, privkey, _, contract, function, amount, price, gas, cancel = wallet
+
+                    name = name if len(name) <= 12 else name[:12]
+
+                    address = get_pub_from_priv(privkey, blockchain="eth")
+
+                    if address and w3conn.isAddress(contract):
+
+                        try:
+
+                            wallets.append(
+
+                                {
+                                    "name": name.upper(),
+                                    "address": address,
+                                    "privkey": privkey,
+                                    "task-id": task_id,
+                                    "contract": contract,
+                                    "function": function,
+                                    "amount": int(amount),
+                                    "price": float(price),
+                                    "gas": int(gas),
+                                    "cancel": int(cancel),
+                                    "tasks": 1
+                                }
+                            )
+
+                        except ValueError:
+
+                            return None
+                    else:
+
+                        return None
+
+                task_id += 1
+
+    except:
+
+        return None
+
+    return wallets
+
+
 def get_sol_wallets():
 
     wallets = []
@@ -82,7 +145,7 @@ def get_sol_wallets():
 
                             tasks = int(tasks)
 
-                            if mode in [1, 2, 7, 9]:
+                            if mode in [1, 2, 9, 11]:
                                     
                                 if tasks > max_tasks:
 
@@ -113,6 +176,49 @@ def get_sol_wallets():
     return wallets
 
 
+def get_eth_sniper_wallets():
+
+    try:
+
+        wallets = []
+
+        with open('eth-wallets.csv', 'r') as f:
+
+            reader = csv.reader(f)
+
+            next(reader)
+
+            for wallet in reader:
+
+                name, privkey, tasks, _, _, _, _, gas, _ = wallet
+
+                name = name if len(name) <= 12 else name[:12]
+
+                address = get_pub_from_priv(privkey, blockchain="eth")
+
+                if address:
+
+                    try:
+
+                        wallets.append({
+                            "name": name.upper(),
+                            "address": address,
+                            "privkey": privkey,
+                            "gas": int(gas),
+                            "tasks": int(tasks)
+                        })
+
+                    except ValueError:
+
+                        pass
+
+        return wallets
+
+    except:
+
+        return None
+
+
 def clear(newline: bool = True):
 
     if user_platform == "darwin":
@@ -135,43 +241,56 @@ def mint(wallet: dict):
 
     trs = []
 
-    show_drop_time = datetime.fromtimestamp(DROP_TIME).strftime("%H:%M:%S")
     
-    console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Initialazing mint[/]\n".format(name, f"0/{tasks}", show_drop_time)), end="")
+    if mode in [1, 2, 9, 11]:
 
-    if (auto_timer and mode != 11) or user_time:
-
-        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for drop time[/]\n".format(name, f"0/{tasks}", show_drop_time)), end="")
-
-        wait_for_drop(exit_before=3)
-    
-    elif await_mints:
+        show_drop_time = datetime.fromtimestamp(DROP_TIME).strftime("%H:%M:%S")
         
-        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for mints[/]\n".format(name, f"0/{tasks}", show_drop_time)), end="")
-        
-        wait_for_mints()
-        
-    while True:
+        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Initialazing mint[/]\n".format(name, f"0/{tasks}", show_drop_time)), end="")
 
-        recent_blockhash = get_blockhash()
+    elif mode == 4:
 
-        if recent_blockhash:
+        gas = wallet["gas"]
+
+        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ 0/1 ] [GAS ~ {:<6}][/] [yellow]Initialazing mint[/]\n".format(name, gas)), end="")
+
+    if mode != 4:
             
-            console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Initialazing transactions[/]\n".format(name, f"0/{tasks}", show_drop_time)), end="")
-            
-            break
-        
-        else:
+        if (auto_timer and mode != 11) or user_time:
 
-            console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [red]Unable to initialize txs (node)[/]\n".format(name, f"0/{tasks}", show_drop_time)), end="")
-            
-    if (auto_timer and mode != 11) or user_time:
+            console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for drop time[/]\n".format(name, f"0/{tasks}", show_drop_time)), end="")
+
+            wait_for_drop(exit_before=3)
         
-        wait_for_drop()
+        elif await_mints:
+            
+            console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for mints[/]\n".format(name, f"0/{tasks}", show_drop_time)), end="")
+            
+            wait_for_mints()
+            
+        while True:
+
+            recent_blockhash = get_blockhash()
+
+            if recent_blockhash:
+                
+                console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Initialazing transactions[/]\n".format(name, f"0/{tasks}", show_drop_time)), end="")
+                
+                break
+            
+            else:
+
+                console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [red]Unable to initialize txs (node)[/]\n".format(name, f"0/{tasks}", show_drop_time)), end="")
+                
+        if (auto_timer and mode != 11) or user_time:
+            
+            wait_for_drop()
             
     for i in range(tasks):
         
-        status = "[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/]".format(name, f"{i + 1}/{tasks}", show_drop_time)
+        if mode != 4:
+            
+            status = "[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/]".format(name, f"{i + 1}/{tasks}", show_drop_time)
 
         if mode == 1:
 
@@ -189,7 +308,7 @@ def mint(wallet: dict):
                 daemon=True
             )
 
-        if mode == 7:
+        if mode == 9:
             
             createtxT = Thread(
                 target=send_lmn_tx,
@@ -197,7 +316,7 @@ def mint(wallet: dict):
                 daemon=True
             )
 
-        if mode == 9:
+        if mode == 11:
             
             createtxT = Thread(
                 target=send_ml_tx,
@@ -205,6 +324,10 @@ def mint(wallet: dict):
                 daemon=True
             )
             
+        if mode == 4:
+
+            createtxT = Thread(target=mint_contract, args=[wallet], daemon=True)
+
         createtxT.start()
         trs.append(createtxT)
     
@@ -309,6 +432,26 @@ def send_ml_tx(privkey: str, rpc: str, blockhash: Blockhash, status: str):
     elif tx is False:
         
         console.print(logger(f"{status} [red]Error while sending tx[/]\n"), end="")
+        
+
+def mint_contract(wallet: dict):
+
+    eth_mint = EthContract(
+        contract_adress=wallet["contract"],
+        function=wallet["function"],
+        amount=wallet["amount"],
+        price=wallet["price"],
+        gas=wallet["gas"],
+        cancel=wallet["cancel"],
+        task=wallet["task-id"],
+        name=wallet["name"],
+        privkey=wallet["privkey"],
+        wallet_address=wallet["address"],
+        rpc=eth_rpc
+
+    )
+
+    eth_mint.run_task()
 
 
 def send_lmn_tx(privkey: str, rpc: str, blockhash: Blockhash, status: str):
@@ -1225,6 +1368,65 @@ def get_cc_collection_metadata(symbol: str):
                 }
         
     return None
+
+def get_os_collection_metadata(symbol: str):
+    
+    try:
+        
+        headers = {
+            'Host': 'api.opensea.io',
+            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="101", "Google Chrome";v="101"',
+            'x-build-id': '73afa61d8158d8f35097d0761fda94f7843a950b',
+            'sec-ch-ua-mobile': '?0',
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36',
+            'content-type': 'application/json',
+            'accept': '*/*',
+            'x-signed-query': 'd73eda68d997705a2785aa8222d5a3c5663c392d0df699f665e44fb31e14642b',
+            'x-api-key': '2f6f419a083c46de9d83ce3dbe7db601',
+            'sec-ch-ua-platform': '"macOS"',
+            'origin': 'https://opensea.io',
+            'sec-fetch-site': 'same-site',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-dest': 'empty',
+            'referer': 'https://opensea.io/',
+            'accept-language': 'es-ES,es;q=0.9',
+        }
+
+        params = {
+            'id': 'TraitsDropdownQuery',
+            'query': 'query TraitsDropdownQuery(\n  $collection: CollectionSlug!\n) {\n  collection(collection: $collection) {\n    assetCount\n    numericTraits {\n      key\n      value {\n        max\n        min\n      }\n    }\n    stringTraits {\n      key\n      counts {\n        count\n        value\n      }\n    }\n    defaultChain {\n      identifier\n    }\n    id\n  }\n}\n',
+            'variables': {
+                'collection': symbol,
+            },
+        }
+
+        payload = create_tls_payload(
+            url="https://api.opensea.io/graphql/",
+            method="POST",
+            headers=headers,
+            params=params
+        )
+
+        res = requests.post('http://127.0.0.1:3000/', json=payload, timeout=3).json()
+
+        res = json.loads(res["body"])
+
+        if res["data"]["collection"]["stringTraits"]:
+            
+            attributes = [attr["key"] for attr in res["data"]["collection"]["stringTraits"]]
+
+        else:
+            
+            attributes = []
+            
+        return {
+            
+            "attributes": attributes
+        }
+
+    except:
+        
+        return None
     
     
 def get_account_last_txs(account: str, limit: int, commitment: str, until: str = None):
@@ -1300,6 +1502,37 @@ def get_sweeper_data(file_name: str):
     except:
                 
         return None
+
+def monitor_os_sniper_file(file_name: str):
+    
+    global sniper_data
+    
+    while not kill_sniper:
+        
+        try:
+            
+            with open(f'{file_name}.csv', 'r') as f:
+
+                reader = list(csv.reader(f))
+
+                keys = reader[0]
+                values = reader[1]
+                        
+            sniper_data_raw = dict(zip(keys, values))
+            
+            sniper_data_raw["MinPrice"] = float(sniper_data_raw["MinPrice"])
+            sniper_data_raw["MaxPrice"] = float(sniper_data_raw["MaxPrice"])
+                                
+            sniper_data_raw["Gas"] = float(sniper_data_raw["Gas"])
+                
+            sniper_data = sniper_data_raw
+            
+        except:
+                        
+            sniper_data = None
+            
+        time.sleep(0.5)
+
 
 
 def monitor_fff_sniper_file(file_name: str):
@@ -1627,6 +1860,77 @@ def monitor_cc_collection_floor():
             time.sleep(10)
 
 
+def monitor_os_collection_floor(symbol: str):
+            
+    while not kill_sniper:
+        
+        if status:
+                
+            try:
+
+                headers = {
+                    'Host': 'api.opensea.io',
+                    'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="101", "Google Chrome";v="101"',
+                    'x-build-id': '2457c87a0e707327c43a6ac8251d326f5b8ddf3d',
+                    'sec-ch-ua-mobile': '?0',
+                    'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36',
+                    'accept': '*/*',
+                    'content-type': 'application/json',
+                    'x-signed-query': 'a58c3c6aea76e9b6e7fa7207c21ab86c0638da0c809d802ffa4f888f8e91d290',
+                    'x-api-key': '2f6f419a083c46de9d83ce3dbe7db601',
+                    'sec-ch-ua-platform': '"macOS"',
+                    'origin': 'https://opensea.io',
+                    'sec-fetch-site': 'same-site',
+                    'sec-fetch-mode': 'cors',
+                    'sec-fetch-dest': 'empty',
+                    'referer': 'https://opensea.io/',
+                    'accept-language': 'es-ES,es;q=0.9',
+                }
+
+                params = {
+                    'id': 'CollectionPageQuery',
+                    'query': 'query CollectionPageQuery(\n  $collection: CollectionSlug!\n  $collections: [CollectionSlug!]\n  $collectionQuery: String\n  $includeHiddenCollections: Boolean\n  $numericTraits: [TraitRangeType!]\n  $query: String\n  $sortAscending: Boolean\n  $sortBy: SearchSortBy\n  $stringTraits: [TraitInputType!]\n  $toggles: [SearchToggle!]\n  $showContextMenu: Boolean\n  $isCategory: Boolean!\n  $includeCollectionFilter: Boolean!\n) {\n  collection(collection: $collection) {\n    isEditable\n    bannerImageUrl\n    name\n    description\n    imageUrl\n    relayId\n    connectedTwitterUsername\n    assetContracts(first: 2) {\n      edges {\n        node {\n          chain\n          id\n        }\n      }\n    }\n    representativeAsset {\n      assetContract {\n        chain\n        openseaVersion\n        id\n      }\n      id\n    }\n    slug\n    ...verification_data\n    ...collection_url\n    ...CollectionHeader_data\n    owner {\n      ...AccountLink_data\n      id\n    }\n    ...PhoenixCollectionSocialBar_data\n    ...PhoenixCollectionActionBar_data\n    ...PhoenixCollectionInfo_data\n    id\n  }\n  ...TrendingCollectionsList_data_29bCDU @include(if: $isCategory)\n  assets: query @skip(if: $isCategory) {\n    ...AssetSearch_data_40oIf9\n  }\n}\n\nfragment AccountLink_data on AccountType {\n  address\n  config\n  isCompromised\n  user {\n    publicUsername\n    id\n  }\n  displayName\n  ...ProfileImage_data\n  ...wallet_accountKey\n  ...accounts_url\n}\n\nfragment AssetCardAnnotations_assetBundle on AssetBundleType {\n  assetCount\n}\n\nfragment AssetCardAnnotations_asset_1OrK6u on AssetType {\n  assetContract {\n    chain\n    id\n  }\n  decimals\n  relayId\n  favoritesCount\n  isDelisted\n  isFavorite\n  isFrozen\n  hasUnlockableContent\n  ...AssetCardBuyNow_data\n  orderData {\n    bestAsk {\n      orderType\n      relayId\n      maker {\n        address\n        id\n      }\n    }\n  }\n  ...AssetContextMenu_data_3z4lq0 @include(if: $showContextMenu)\n}\n\nfragment AssetCardBuyNow_data on AssetType {\n  tokenId\n  relayId\n  assetContract {\n    address\n    chain\n    id\n  }\n  collection {\n    slug\n    id\n  }\n  orderData {\n    bestAsk {\n      relayId\n      decimals\n      paymentAssetQuantity {\n        asset {\n          usdSpotPrice\n          decimals\n          id\n        }\n        quantity\n        id\n      }\n    }\n  }\n}\n\nfragment AssetCardContent_asset on AssetType {\n  relayId\n  name\n  ...AssetMedia_asset\n  assetContract {\n    address\n    chain\n    openseaVersion\n    id\n  }\n  tokenId\n  collection {\n    slug\n    id\n  }\n  isDelisted\n}\n\nfragment AssetCardContent_assetBundle on AssetBundleType {\n  assetQuantities(first: 18) {\n    edges {\n      node {\n        asset {\n          relayId\n          ...AssetMedia_asset\n          id\n        }\n        id\n      }\n    }\n  }\n}\n\nfragment AssetCardFooter_assetBundle on AssetBundleType {\n  ...AssetCardAnnotations_assetBundle\n  name\n  assetCount\n  assetQuantities(first: 18) {\n    edges {\n      node {\n        asset {\n          collection {\n            name\n            relayId\n            slug\n            isVerified\n            ...collection_url\n            id\n          }\n          id\n        }\n        id\n      }\n    }\n  }\n  assetEventData {\n    lastSale {\n      unitPriceQuantity {\n        ...AssetQuantity_data\n        id\n      }\n    }\n  }\n  orderData {\n    bestBid {\n      orderType\n      paymentAssetQuantity {\n        quantity\n        ...AssetQuantity_data\n        id\n      }\n    }\n    bestAsk {\n      maker {\n        address\n        id\n      }\n      closedAt\n      orderType\n      dutchAuctionFinalPrice\n      openedAt\n      priceFnEndedAt\n      quantity\n      decimals\n      paymentAssetQuantity {\n        quantity\n        ...AssetQuantity_data\n        id\n      }\n    }\n  }\n}\n\nfragment AssetCardFooter_asset_1OrK6u on AssetType {\n  ...AssetCardAnnotations_asset_1OrK6u\n  name\n  tokenId\n  collection {\n    slug\n    name\n    isVerified\n    ...collection_url\n    id\n  }\n  isDelisted\n  assetContract {\n    address\n    chain\n    openseaVersion\n    id\n  }\n  assetEventData {\n    lastSale {\n      unitPriceQuantity {\n        ...AssetQuantity_data\n        id\n      }\n    }\n  }\n  orderData {\n    bestBid {\n      orderType\n      paymentAssetQuantity {\n        quantity\n        ...AssetQuantity_data\n        id\n      }\n    }\n    bestAsk {\n      maker {\n        address\n        id\n      }\n      closedAt\n      orderType\n      dutchAuctionFinalPrice\n      openedAt\n      priceFnEndedAt\n      quantity\n      decimals\n      paymentAssetQuantity {\n        quantity\n        ...AssetQuantity_data\n        id\n      }\n    }\n  }\n}\n\nfragment AssetContextMenu_data_3z4lq0 on AssetType {\n  ...asset_edit_url\n  ...asset_url\n  ...itemEvents_data\n  relayId\n  isDelisted\n  isEditable {\n    value\n    reason\n  }\n  isListable\n  ownership(identity: {}) {\n    isPrivate\n    quantity\n  }\n  creator {\n    address\n    id\n  }\n  collection {\n    isAuthorizedEditor\n    id\n  }\n  imageUrl\n  ownedQuantity(identity: {})\n}\n\nfragment AssetMedia_asset on AssetType {\n  animationUrl\n  backgroundColor\n  collection {\n    displayData {\n      cardDisplayStyle\n    }\n    id\n  }\n  isDelisted\n  imageUrl\n  displayImageUrl\n}\n\nfragment AssetQuantity_data on AssetQuantityType {\n  asset {\n    ...Price_data\n    id\n  }\n  quantity\n}\n\nfragment AssetSearchFilter_data_PFx8Z on Query {\n  ...CollectionFilter_data_tXjHb @include(if: $includeCollectionFilter)\n  collection(collection: $collection) {\n    numericTraits {\n      key\n      value {\n        max\n        min\n      }\n      ...NumericTraitFilter_data\n    }\n    stringTraits {\n      key\n      ...StringTraitFilter_data\n    }\n    defaultChain {\n      identifier\n    }\n    id\n  }\n  ...PaymentFilter_data_2YoIWt\n}\n\nfragment AssetSearchList_data_gVyhu on SearchResultType {\n  asset {\n    assetContract {\n      address\n      chain\n      id\n    }\n    collection {\n      isVerified\n      relayId\n      id\n    }\n    relayId\n    tokenId\n    ...AssetSelectionItem_data\n    ...asset_url\n    id\n  }\n  assetBundle {\n    relayId\n    id\n  }\n  ...Asset_data_gVyhu\n}\n\nfragment AssetSearch_data_40oIf9 on Query {\n  ...AssetSearchFilter_data_PFx8Z\n  ...SearchPills_data_2Kg4Sq\n  search(collections: $collections, first: 32, numericTraits: $numericTraits, querystring: $query, resultType: ASSETS, sortAscending: $sortAscending, sortBy: $sortBy, stringTraits: $stringTraits, toggles: $toggles) {\n    edges {\n      node {\n        ...AssetSearchList_data_gVyhu\n        __typename\n      }\n      cursor\n    }\n    totalCount\n    pageInfo {\n      endCursor\n      hasNextPage\n    }\n  }\n}\n\nfragment AssetSelectionItem_data on AssetType {\n  backgroundColor\n  collection {\n    displayData {\n      cardDisplayStyle\n    }\n    imageUrl\n    id\n  }\n  imageUrl\n  name\n  relayId\n}\n\nfragment Asset_data_gVyhu on SearchResultType {\n  asset {\n    relayId\n    isDelisted\n    ...AssetCardContent_asset\n    ...AssetCardFooter_asset_1OrK6u\n    ...AssetMedia_asset\n    ...asset_url\n    ...itemEvents_data\n    orderData {\n      bestAsk {\n        paymentAssetQuantity {\n          quantityInEth\n          id\n        }\n      }\n    }\n    id\n  }\n  assetBundle {\n    relayId\n    ...bundle_url\n    ...AssetCardContent_assetBundle\n    ...AssetCardFooter_assetBundle\n    orderData {\n      bestAsk {\n        paymentAssetQuantity {\n          quantityInEth\n          id\n        }\n      }\n    }\n    id\n  }\n}\n\nfragment CollectionCardContextMenu_data on CollectionType {\n  ...collection_url\n}\n\nfragment CollectionCard_data on CollectionType {\n  ...CollectionCardContextMenu_data\n  ...CollectionCard_getShowCollectionCardData\n  ...collection_url\n  description\n  name\n  shortDescription\n  slug\n  logo\n  banner\n  isVerified\n  owner {\n    ...AccountLink_data\n    id\n  }\n  stats {\n    totalSupply\n    id\n  }\n  defaultChain {\n    identifier\n  }\n}\n\nfragment CollectionCard_getShowCollectionCardData on CollectionType {\n  logo\n  banner\n}\n\nfragment CollectionFilter_data_tXjHb on Query {\n  selectedCollections: collections(first: 25, collections: $collections, includeHidden: true) {\n    edges {\n      node {\n        assetCount\n        imageUrl\n        name\n        slug\n        isVerified\n        id\n      }\n    }\n  }\n  collections(first: 100, includeHidden: $includeHiddenCollections, query: $collectionQuery, sortBy: SEVEN_DAY_VOLUME) {\n    edges {\n      node {\n        assetCount\n        imageUrl\n        name\n        slug\n        isVerified\n        id\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      endCursor\n      hasNextPage\n    }\n  }\n}\n\nfragment CollectionHeader_data on CollectionType {\n  name\n  description\n  imageUrl\n  bannerImageUrl\n  relayId\n  slug\n  owner {\n    ...AccountLink_data\n    id\n  }\n  ...CollectionStatsBar_data\n  ...SocialBar_data\n  ...verification_data\n  ...CollectionWatchlistButton_data\n}\n\nfragment CollectionModalContent_data on CollectionType {\n  description\n  imageUrl\n  name\n  slug\n}\n\nfragment CollectionStatsBar_data on CollectionType {\n  stats {\n    numOwners\n    totalSupply\n    id\n  }\n  nativePaymentAsset {\n    ...PaymentAssetLogo_data\n    id\n  }\n  ...collection_url\n  ...collection_stats\n}\n\nfragment CollectionWatchlistButton_data on CollectionType {\n  relayId\n  isWatching\n}\n\nfragment NumericTraitFilter_data on NumericTraitTypePair {\n  key\n  value {\n    max\n    min\n  }\n}\n\nfragment PaymentAssetLogo_data on PaymentAssetType {\n  symbol\n  asset {\n    imageUrl\n    id\n  }\n}\n\nfragment PaymentFilter_data_2YoIWt on Query {\n  paymentAssets(first: 10) {\n    edges {\n      node {\n        symbol\n        relayId\n        id\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      endCursor\n      hasNextPage\n    }\n  }\n  PaymentFilter_collection: collection(collection: $collection) {\n    paymentAssets {\n      symbol\n      relayId\n      id\n    }\n    id\n  }\n}\n\nfragment PhoenixCollectionActionBar_data on CollectionType {\n  relayId\n  isWatching\n  ...collection_url\n  ...CollectionWatchlistButton_data\n}\n\nfragment PhoenixCollectionInfo_data on CollectionType {\n  description\n  name\n  nativePaymentAsset {\n    ...PaymentAssetLogo_data\n    id\n  }\n  ...collection_url\n  ...collection_stats\n}\n\nfragment PhoenixCollectionSocialBar_data on CollectionType {\n  assetContracts(first: 2) {\n    edges {\n      node {\n        address\n        blockExplorerLink\n        chain\n        chainData {\n          blockExplorerName\n        }\n        id\n      }\n    }\n  }\n  discordUrl\n  externalUrl\n  instagramUsername\n  mediumUsername\n  telegramUrl\n  twitterUsername\n  connectedTwitterUsername\n  ...collection_url\n}\n\nfragment Price_data on AssetType {\n  decimals\n  imageUrl\n  symbol\n  usdSpotPrice\n  assetContract {\n    blockExplorerLink\n    chain\n    id\n  }\n}\n\nfragment ProfileImage_data on AccountType {\n  imageUrl\n  user {\n    publicUsername\n    id\n  }\n  displayName\n}\n\nfragment SearchPills_data_2Kg4Sq on Query {\n  selectedCollections: collections(first: 25, collections: $collections, includeHidden: true) {\n    edges {\n      node {\n        imageUrl\n        name\n        slug\n        ...CollectionModalContent_data\n        id\n      }\n    }\n  }\n}\n\nfragment SocialBar_data on CollectionType {\n  relayId\n  discordUrl\n  externalUrl\n  instagramUsername\n  mediumUsername\n  slug\n  telegramUrl\n  twitterUsername\n  connectedTwitterUsername\n  assetContracts(first: 2) {\n    edges {\n      node {\n        blockExplorerLink\n        chainData {\n          blockExplorerName\n        }\n        id\n      }\n    }\n  }\n  ...collection_url\n  ...CollectionWatchlistButton_data\n}\n\nfragment StringTraitFilter_data on StringTraitType {\n  counts {\n    count\n    value\n  }\n  key\n}\n\nfragment TrendingCollectionsList_data_29bCDU on Query {\n  trendingCollections(categories: $collections, first: 12) {\n    edges {\n      node {\n        ...CollectionCard_data\n        ...CollectionCard_getShowCollectionCardData\n        relayId\n        id\n        __typename\n      }\n      cursor\n    }\n    pageInfo {\n      endCursor\n      hasNextPage\n    }\n  }\n}\n\nfragment accounts_url on AccountType {\n  address\n  user {\n    publicUsername\n    id\n  }\n}\n\nfragment asset_edit_url on AssetType {\n  assetContract {\n    address\n    chain\n    id\n  }\n  tokenId\n  collection {\n    slug\n    id\n  }\n}\n\nfragment asset_url on AssetType {\n  assetContract {\n    address\n    chain\n    id\n  }\n  tokenId\n}\n\nfragment bundle_url on AssetBundleType {\n  slug\n}\n\nfragment collection_stats on CollectionType {\n  statsV2 {\n    numOwners\n    totalSupply\n    totalVolume {\n      unit\n    }\n    floorPrice {\n      unit\n    }\n  }\n}\n\nfragment collection_url on CollectionType {\n  slug\n}\n\nfragment itemEvents_data on AssetType {\n  assetContract {\n    address\n    chain\n    id\n  }\n  tokenId\n}\n\nfragment verification_data on CollectionType {\n  isMintable\n  isSafelisted\n  isVerified\n}\n\nfragment wallet_accountKey on AccountType {\n  address\n}\n',
+                    'variables': {
+                        'collection': symbol,
+                        'collections': [
+                            symbol,
+                        ],
+                        'collectionQuery': None,
+                        'includeHiddenCollections': None,
+                        'numericTraits': None,
+                        'query': None,
+                        'sortAscending': True,
+                        'sortBy': 'PRICE',
+                        'stringTraits': None,
+                        'toggles': None,
+                        'showContextMenu': True,
+                        'isCategory': False,
+                        'includeCollectionFilter': False,
+                    },
+                }
+
+                payload = create_tls_payload(
+                    url="https://api.opensea.io/graphql/",
+                    method="POST",
+                    headers=headers,
+                    params=params
+                )
+                
+                res = requests.post('http://127.0.0.1:3000', json=payload, timeout=3).json()
+
+                res = json.loads(res["body"])
+                
+                floor = float(res["data"]["collection"]["statsV2"]["floorPrice"]["unit"])
+                
+                console.print(logger(f"{status} [yellow]Current floor price[/] [purple]>[/] {floor} ETH"))
+            
+            except:
+                                
+                pass
+                
+            time.sleep(10)
+
+
 def get_drop_time():
 
     if PROGRAM in [SolanaPrograms.CMV2_PROGRAM, SolanaPrograms.LMN_PROGRAM]:
@@ -1672,6 +1976,18 @@ def validate_sol_rpc(rpc: str):
         
         return None
 
+
+def validate_eth_rpc(rpc: str):
+
+    try:
+        
+        w3conn = Web3(Web3.HTTPProvider(rpc))
+
+        return w3conn.isConnected()
+
+    except:
+        
+        return False
     
 def wait_for_drop(exit_before: int = 0):
 
@@ -1706,7 +2022,7 @@ def wait_for_mints():
         
         current_minted = None
         
-        if mode in [1,2,7]:
+        if mode in [1,2,9]:
                 
             metadata = asyncio.run(get_account_metadata("CandyMachine", CM, PROGRAM))   
             
@@ -1720,7 +2036,7 @@ def wait_for_mints():
                     
                     current_minted = metadata.items_redeemed_normal
                 
-        elif mode == 9:
+        elif mode == 11:
             
             current_minted = get_ml_items_redeemed(index_key=CM["REACT_APP_INDEX_KEY"])
         
@@ -1739,14 +2055,48 @@ def create_table_wallets(wallets: list):
         table.add_column("ADDRESS", style="yellow", justify="center")
         table.add_column("TASKS", style="cyan", justify="center")
         table.add_column("BALANCE", style="cyan", justify="center")
-        
+
+        if "gas" in wallets[0].keys():
+
+            table.add_column("GAS", style="cyan", justify="center")
+
         for wallet in wallets:
 
-            balance = get_wallet_balance(wallet["address"], blockchain="sol")
+            if "gas" in wallet.keys():
 
-            table.add_row(wallet["name"], wallet["address"], str(wallet["tasks"]), str(round(lamports_to_sol(balance), 2)))
+                balance = get_wallet_balance(
+                    wallet["address"], blockchain="eth")
+
+                table.add_row(wallet["name"], wallet["address"], str(
+                    wallet["tasks"]), str(balance/(10**18)), str(wallet["gas"]))
+
+            else:
+
+                balance = get_wallet_balance(
+                    wallet["address"], blockchain="sol")
+
+                table.add_row(wallet["name"], wallet["address"], str(
+                    wallet["tasks"]), str(round(lamports_to_sol(balance), 2)))
 
         return table
+
+
+def create_table_contract(wallets: dict):
+
+    table = Table(show_lines=True)
+    table.add_column("NAME", style="yellow", justify="center")
+    table.add_column("ADDRESS", style="green", justify="center")
+    table.add_column("AMOUNT", style="cyan", justify="center")
+    table.add_column("MINT PRICE", style="cyan", justify="center")
+    table.add_column("GAS", style="cyan", justify="center")
+
+    for wallet in wallets:
+
+        table.add_row(wallet["name"], wallet["address"], str(
+            wallet["amount"]), str(wallet["price"]), str(wallet["gas"]))
+
+    return table
+
 
 
 def set_app_title(text: str):
@@ -1765,7 +2115,7 @@ def show_cm_status(cm: str, program: str):
 
     available = redeemed = None
     
-    if mode in [1,2,7]:
+    if mode in [1,2,9]:
             
         metadata = asyncio.run(get_account_metadata(
             "CandyMachine",
@@ -1790,7 +2140,7 @@ def show_cm_status(cm: str, program: str):
                 available = metadata.data.items_available
                 redeemed = metadata.items_redeemed
                 
-    elif mode == 9:        
+    elif mode == 11:        
         
         if program == SolanaPrograms.ML_PROGRAM:
             
@@ -1950,7 +2300,8 @@ def get_wallet_to_transfer():
 
         try:
 
-            wallet = console.input("[purple] >>[/] Select wallet to transfer: ")
+            wallet = console.input(
+                "[purple] >>[/] Select wallet to transfer: ")
 
             if wallet == "e":
 
@@ -1973,7 +2324,8 @@ def get_listing_price():
 
     while True:
 
-        price = console.input("[purple] >>[/] Insert a price for listing: ")
+        price = console.input(
+            "[purple] >>[/] Insert a price for listing: ")
 
         try:
 
@@ -1998,9 +2350,11 @@ def show_selected_nfts():
         wallet_nfts = wallet["nfts"]
         wallet_balance = wallet["balance"]
 
-        console.print("[purple] >>[/] {:<10} [green]{}[/]\n".format(f"Wallet {i}:", wallet_address))
+        console.print(
+            "[purple] >>[/] {:<10} [green]{}[/]\n".format(f"Wallet {i}:", wallet_address))
 
-        console.print("[purple]  >[/] {:<10} [cyan]{}[/]\n".format(f"Balance:", round(lamports_to_sol(wallet_balance), 2)))
+        console.print(
+            "[purple]  >[/] {:<10} [cyan]{}[/]\n".format(f"Balance:", round(lamports_to_sol(wallet_balance), 2)))
 
         if wallet_nfts:
 
@@ -2012,31 +2366,37 @@ def show_selected_nfts():
 
                     if operation_type in ["l", "ts", "tn", "b"]:
                         
-                        console.print("[purple]  >[/] {:<10} [yellow]{}[/]".format(f"NFT {j}:", f"[purple]> [/]{nft_name}"))
+                        console.print(
+                            "[purple]  >[/] {:<10} [yellow]{}[/]".format(f"NFT {j}:", f"[purple]> [/]{nft_name}"))
                     
                     elif operation_type in ["d", "u"]:
 
-                        console.print("[purple]  >[/] {:<10} [yellow]{}[/] [cyan]{}[/]".format(f"NFT {j}:", f"[purple]> [/]{nft_name}", nft["price"]))
+                        console.print(
+                            "[purple]  >[/] {:<10} [yellow]{}[/] [cyan]{}[/]".format(f"NFT {j}:", f"[purple]> [/]{nft_name}", nft["price"]))
                         
                 else:
                     
                     if operation_type in ["l", "ts", "tn", "b"]:
                         
-                        console.print("[purple]  >[/] {:<10} [yellow]{}[/]".format(f"NFT {j}:", nft_name))
+                        console.print(
+                            "[purple]  >[/] {:<10} [yellow]{}[/]".format(f"NFT {j}:", nft_name))
                     
                     elif operation_type in ["d", "u"]:
 
-                        console.print("[purple]  >[/] {:<10} [yellow]{}[/] [cyan]{}[/]".format(f"NFT {j}:", nft_name, nft["price"]))
+                        console.print(
+                            "[purple]  >[/] {:<10} [yellow]{}[/] [cyan]{}[/]".format(f"NFT {j}:", nft_name, nft["price"]))
                         
         else:
 
             if operation_type in ["l", "ts", "tn", "b"]:
 
-                console.print("[purple]  >[/] [yellow]No NFT's found on this wallet")
+                console.print(
+                    "[purple]  >[/] [yellow]No NFT's found on this wallet")
 
             elif operation_type in ["d", "u"]:
 
-                console.print("[purple]  >[/] [yellow]No NFT's listed by this wallet")
+                console.print(
+                    "[purple]  >[/] [yellow]No NFT's listed by this wallet")
 
         print()
 
@@ -2065,13 +2425,14 @@ def check_node_health():
 
 def get_module():
 
-    options = list(range(1, 11))
+    options = list(range(1, 13))
 
     while True:
 
         try:
 
-            mode = int(console.input("[purple] >>[/] Select a module to use: "))
+            mode = int(console.input(
+                "[purple] >>[/] Select a module to use: "))
 
             if mode in options:
 
@@ -2171,7 +2532,8 @@ while True:
                     
                     else:
 
-                        console.input("[yellow] ERROR![/] [red]Invalid or already in use beta key [/]", password=True)
+                        console.input(
+                            "[yellow] ERROR![/] [red]Invalid or already in use beta key [/]", password=True)
 
                 else:
                         
@@ -2196,24 +2558,31 @@ while True:
                                     break
 
                                 else:
-                                    console.input("[yellow] ERROR![/] [red]Provided holder wallet is already in use [/]", password=True)
+                                    console.input(
+                                        "[yellow] ERROR![/] [red]Provided holder wallet is already in use [/]", password=True)
 
                             else:
-                                console.input("[yellow] ERROR![/] [red]Provided holder wallet has no Neura NFT [/]", password=True)
+                                console.input(
+                                    "[yellow] ERROR![/] [red]Provided holder wallet has no Neura NFT [/]", password=True)
                         else:
 
-                            console.input("[yellow] ERROR![/] [red]Invalid holder wallet provided[/]", password=True)
+                            console.input(
+                                "[yellow] ERROR![/] [red]Invalid holder wallet provided[/]", password=True)
                             
                     else:
 
-                        console.input("[yellow] ERROR![/] [red]Neura database is unreachable, please contact support [/]", password=True)
+                        console.input(
+                            "[yellow] ERROR![/] [red]Neura database is unreachable, please contact support [/]", password=True)
             else:
-                console.input("[yellow] ERROR![/] [red]Unable to connect with the Nuera database, please restart and if the problem persists, contact Neura support [/]", password=True)
+                console.input(
+                    "[yellow] ERROR![/] [red]Unable to connect with the Nuera database, please restart and if the problem persists, contact Neura support [/]", password=True)
         else:
-            console.input("[yellow] ERROR![/] [red]Invalid holder private key or beta access code [/]", password=True)
+            console.input(
+                "[yellow] ERROR![/] [red]Invalid holder private key or beta access code [/]", password=True)
 
     else:
-        console.input("[yellow] ERROR![/] [red]Unable to get device info, please contact support[/]", password=True)
+        console.input(
+            "[yellow] ERROR![/] [red]Unable to get device info, please contact support[/]", password=True)
 
 database.close_connection()
 
@@ -2223,7 +2592,8 @@ while True:
 
     if not all(file in os.listdir(os.path.join(os.getcwd(), "bin")) for file in ["TLS.exe", "bifrost.dll"]):
 
-        console.input("[yellow] ERROR![/] [red]Some of the Neura config files are missing, please contact support [/]", password=True)
+        console.input(
+            "[yellow] ERROR![/] [red]Some of the Neura config files are missing, please contact support [/]", password=True)
 
     else:
             
@@ -2235,7 +2605,8 @@ while True:
 
         except:
 
-            console.input("[yellow] ERROR![/] [red]Some of the Neura config files are missing, please contact support [/]", password=True)
+            console.input(
+                "[yellow] ERROR![/] [red]Some of the Neura config files are missing, please contact support [/]", password=True)
     
     
 while True:
@@ -2259,6 +2630,7 @@ while True:
     min_tasks = 500
     
     valid_sol_rpc = validate_sol_rpc(rpc=sol_rpc)
+    valid_eth_rpc = validate_eth_rpc(rpc=eth_rpc)
     
     menu = False
 
@@ -2266,15 +2638,26 @@ while True:
 
     if sol_rpc and valid_sol_rpc:
 
-        console.print(" {:<10} [green]{:<5}[/] [purple]> [/]{}".format("SOL RPC:", "ON", f"{sol_rpc} [purple]>[/] {valid_sol_rpc} ms"))
+        console.print(
+            " {:<10} [green]{:<5}[/] [purple]> [/]{}".format("SOL RPC:", "ON", f"{sol_rpc} [purple]>[/] {valid_sol_rpc} ms"))
 
     else:
 
         console.print(" {:<10} [red]OFF[/]".format("SOL RPC:"))
 
+    if eth_rpc and valid_eth_rpc:
+
+        console.print(
+            " {:<10} [green]{:<5}[/] [purple]> [/]{}".format("ETH RPC:", "ON", eth_rpc))
+
+    else:
+
+        console.print(" {:<10} [red]OFF[/]".format("ETH RPC:"))
+
     if user_time:
 
-        console.print(" {:<10} [green]{:<5}[/] [purple]> [/]{}".format("Time:", "ON", user_time))
+        console.print(
+            " {:<10} [green]{:<5}[/] [purple]> [/]{}".format("Time:", "ON", user_time))
 
     else:
 
@@ -2285,13 +2668,15 @@ while True:
     console.print("[cyan] [1][/] CandyMachine mint")
     console.print("[cyan] [2][/] MagicEden mint")
     console.print("[cyan] [3][/] MagicEden sniper")
-    console.print("[cyan] [4][/] SOL wallets manager")
-    console.print("[cyan] [5][/] MagicEden sweeper")
-    console.print("[cyan] [6][/] FamousFox sniper")
-    console.print("[cyan] [7][/] LaunchMyNFT mint")
-    console.print("[cyan] [8][/] CoralCube sniper")
-    console.print("[cyan] [9][/] MonkeLabs mint")
-    console.print("[cyan] [10][/] Node health checker\n")
+    console.print("[cyan] [4][/] Contract mint")
+    console.print("[cyan] [5][/] OpenSea sniper")
+    console.print("[cyan] [6][/] SOL wallets manager")
+    console.print("[cyan] [7][/] MagicEden sweeper")
+    console.print("[cyan] [8][/] FamousFox sniper")
+    console.print("[cyan] [9][/] LaunchMyNFT mint")
+    console.print("[cyan] [10][/] CoralCube sniper")
+    console.print("[cyan] [11][/] MonkeLabs mint")
+    console.print("[cyan] [12][/] Node health checker\n")
     
     mode = get_module()
 
@@ -2303,19 +2688,32 @@ while True:
 
             break
 
-        wallets = get_sol_wallets()
+        if mode in [1, 2, 3, 6, 7, 8, 9, 10, 11]:
 
-        if not wallets:
+            wallets = get_sol_wallets()
 
-            console.input("[yellow] ERROR![/] [red]Invalid wallets data / No wallets loaded [/]", password=True)
+            if not wallets:
 
-            break
+                console.input(
+                    "[yellow] ERROR![/] [red]Invalid wallets data / No wallets loaded [/]", password=True)
 
-        if not valid_sol_rpc:
+                break
 
-            console.input("[yellow] ERROR![/] [red]Invalid or unreachable RPC [/]", password=True)
+            if not valid_sol_rpc:
 
-            break
+                console.input(
+                    "[yellow] ERROR![/] [red]Invalid or unreachable RPC [/]", password=True)
+
+                break
+
+        if mode in [4, 5]:
+
+            if not valid_eth_rpc:
+
+                console.input(
+                    "[yellow] ERROR![/] [red]Invalid or unreachable RPC [/]", password=True)
+
+                break
     
             
         if mode == 1:
@@ -2323,7 +2721,8 @@ while True:
             console.print(create_table_wallets(wallets))
             print()
 
-            user_cmid = str(console.input("[purple] >>[/] Candy Machine ID: ")).strip()
+            user_cmid = str(console.input(
+                "[purple] >>[/] Candy Machine ID: ")).strip()
 
             clear()
 
@@ -2340,7 +2739,8 @@ while True:
                     console.print(create_table_wallets(wallets))
                     print()
 
-                    collection_url = str(console.input("[purple] >>[/] MagicEden launchpad collection URL: ")).lower()
+                    collection_url = str(console.input(
+                        "[purple] >>[/] MagicEden launchpad collection URL: ")).lower()
                     clear()
 
                     if collection_url == "e":
@@ -2360,7 +2760,8 @@ while True:
                         console.print(create_table_launchpad(collection))
                         print()
 
-                        proceed = Prompt.ask("[purple] >>[/] Start mint?", choices=["y", "n"])
+                        proceed = Prompt.ask(
+                            "[purple] >>[/] Start mint?", choices=["y", "n"])
                         clear()
 
                         if proceed == "y":
@@ -2372,12 +2773,12 @@ while True:
                             pass
 
                     else:
-                        
-                        console.print("[yellow] ERROR![/] [red]Collection not found\n [/]")
-                        
+                        console.print(
+                            "[yellow] ERROR![/] [red]Collection not found\n [/]")
                 else:
                     
-                    console.input("[yellow] ERROR![/] [red]MagicEden launchpad unavailable [/]", password=True)
+                    console.input(
+                        "[yellow] ERROR![/] [red]MagicEden launchpad unavailable [/]", password=True)
                     
                     menu = True
                     
@@ -2390,7 +2791,8 @@ while True:
             
             wallet_choices = [wallet["name"].lower() for wallet in wallets] + ["e"]
 
-            selected_wallet = Prompt.ask("[purple] >>[/] Choose sniper wallet", choices=wallet_choices)
+            selected_wallet = Prompt.ask(
+                "[purple] >>[/] Choose sniper wallet", choices=wallet_choices)
 
             if selected_wallet == "e":
 
@@ -2422,7 +2824,8 @@ while True:
             
             console.print("[green] Sniper file created successfuly ![/]\n")                 
 
-            start_sniper = Prompt.ask("[purple] >>[/] Are you sure you want to continue? This will start the sniper instantly", choices=["y", "n"])
+            start_sniper = Prompt.ask(
+                "[purple] >>[/] Are you sure you want to continue? This will start the sniper instantly", choices=["y", "n"])
             
             print()
 
@@ -2717,14 +3120,239 @@ while True:
                 break
 
             clear()
-                
+
         if mode == 4:
+
+            wallets = get_eth_wallets()
+
+            if wallets:
+
+                console.print(create_table_contract(wallets))
+                print()
+
+                commit = Prompt.ask(
+                    "[purple] >>[/] Do you want to start the minting process?", choices=["y", "n"])
+
+                if commit == "n":
+
+                    menu = True
+
+            else:
+
+                console.input(
+                    "[yellow] ERROR![/] [red]Invalid minting contract setup file [/]", password=True)
+
+                menu = True
+                
+        if mode == 5:
+
+            wallets = get_eth_sniper_wallets()
+
+            if wallets:
+                
+                console.print(create_table_wallets(wallets))
+                print()
+                
+                wallet_choices = [wallet["name"].lower() for wallet in wallets] + ["e"]
+
+                selected_wallet = Prompt.ask(
+                    "[purple] >>[/] Choose sniper wallet", choices=wallet_choices)
+
+                if selected_wallet == "e":
+
+                    break
+
+                wallet = [
+                    wallet for wallet in wallets if selected_wallet == wallet["name"].lower()][0]
+
+                clear()
+
+                console.print(create_table_wallets([wallet]))
+                print()
+
+                url = str(console.input(
+                    "[purple] >>[/] OpenSea collection URL: ")).lower()
+                clear()
+
+                if url == "e":
+
+                    break
+
+                with console.status("[yellow]Downloading collection data[/]", spinner="bouncingBar", speed=1.5):
+                    
+                    valid_collection = False
+                    
+                    if check_marketplace_url(url):
+
+                        symbol = get_collection_symbol(url)
+                        collection_metadata = get_os_collection_metadata(symbol)
+                        
+                        if collection_metadata:
+                            
+                            valid_collection = True
+                            
+                            collection_attributes = collection_metadata["attributes"]
+                            
+
+                if valid_collection:
+
+                    sniper_default_filters = [
+                        "Cancel",
+                        "MinPrice",
+                        "MaxPrice",
+                        "Gas"
+                    ]
+                    
+                    filters = sniper_default_filters + collection_attributes
+                    
+                    create_csv_file(file_name="os-sniper", columns=filters)
+                    clear()
+                    
+                    console.print("[green] Sniper file created successfuly ![/]\n") 
+
+                    start_sniper = Prompt.ask(
+                        "[purple] >>[/] Are you sure you want to continue? This will start the sniper instantly", choices=["y", "n"])
+                    print()
+
+                    if start_sniper == "y":
+
+                        privkey = wallet["privkey"]
+                        address = wallet["address"]
+                        tasks = wallet["tasks"]
+                        
+                        sniper_data = {}
+                        kill_sniper = False
+                        status = None
+                        
+                        monitorSniperFileT = Thread(
+                            target=monitor_os_sniper_file,
+                            args=["os-sniper"],
+                            daemon=True
+                        )
+                        
+                        monitorSniperFileT.start()
+                        
+                        monitorCollectionFloorT = Thread(
+                            target=monitor_os_collection_floor,
+                            args=[symbol],
+                            daemon=True
+                        )
+                        
+                        monitorCollectionFloorT.start()
+                        
+                        open_sea = OpenSea(
+                            rpc=eth_rpc,
+                            privkey=privkey
+                        )
+                        
+                        for task in range(1, tasks + 1):
+
+                            while True:
+                                
+                                if sniper_data:
+                                    
+                                    if sniper_data["Cancel"]:
+                                        
+                                        kill_sniper = True
+                                        
+                                        break
+
+                                    min_eth = sniper_data["MinPrice"]
+                                    max_eth = sniper_data["MaxPrice"]
+                                    gas = sniper_data["Gas"]
+                                    
+                                    open_sea.gas_fee = gas
+                                    
+                                    attributes = [{"name": key, "values": [value]} for key, value in sniper_data.items() if key not in sniper_default_filters and value and key in collection_attributes]
+
+                                    status = f"[SNIPER] [cyan][{symbol.upper()}] [{min_eth}-{max_eth} ETH] [GAS ~ {gas}]"
+                                    
+                                    if attributes:
+                                        
+                                        status += f"[cyan] [FILTERS ~ {len(attributes)}][/]"
+
+                                    console.print(
+                                        logger(f"{status} [yellow]Fetching new data..."))
+                                    
+                                    listings = OpenSea.get_listed_nfts(
+                                        symbol=symbol,
+                                        min_eth=min_eth,
+                                        max_eth=max_eth,
+                                        filters=attributes
+                                    )
+
+                                    if listings:
+                                        
+                                        asset = listings[0]["node"]["asset"]
+                                        
+                                        console.print(logger(f"{status} [yellow]Found possible NFT"))
+                                        
+                                        token_id = asset["tokenId"]
+                                        price = int(asset["orderData"]["bestAsk"]["paymentAssetQuantity"]["quantity"])
+                                        name = asset["name"]
+                                    
+                                        console.print(logger(f"{status} [yellow]Sniped {name}[/] [purple]>[/] [cyan]{round(float(price/(10**18)), 2)} ETH[/]"))
+                                        
+                                        console.print(
+                                            logger(f"{status} [yellow]Purchasing..."))
+
+                                        tx_hash = open_sea.buy_nft(
+                                            symbol=symbol,
+                                            token_id=token_id,
+                                            price=price
+                                        )
+
+                                        if tx_hash:
+
+                                            console.print(logger(
+                                                f"{status} [green]Purchase successful[/] [purple]>[/] [cyan]{price/(10**18)} ETH[/]"))
+                                            
+                                            break
+                                            
+                                        else:
+
+                                            console.print(
+                                                logger(f"{status} [red]Purchase failed"))
+                                else:
+                                     
+                                    console.print("[red] Invalid sniper file data or format[/]")
+                                    
+                                    time.sleep(0.5)
+
+                            
+                            if kill_sniper:
+                                
+                                break
+                        
+                        kill_sniper = True
+                        
+                        console.input(
+                            "\n\n [purple]>>[/] Press ENTER to exit ", password=True)
+
+                        menu = True
+
+                        break
+                
+                else:
+
+                    clear()
+
+                    console.print("[yellow] ERROR![/] [red]Invalid collection URL\n[/]")
+                
+            else:
+
+                console.input("[yellow] ERROR![/] [red]Invalid parameters provided for sniper wallet [/]", password=True)
+
+                menu = True
+
+        if mode == 6:
 
             while True:
                     
                 wallets_nfts = []
 
-                operation_type = Prompt.ask("[purple] >>[/] What would you like to do?", choices=["l", "d", "u", "ts", "tn", "b", "e"])
+                operation_type = Prompt.ask(
+                    "[purple] >>[/] What would you like to do?", choices=["l", "d", "u", "ts", "tn", "b", "e"])
 
                 if operation_type == "e":
 
@@ -2798,11 +3426,7 @@ while True:
                     else:
                         
                         break
-
-            if operation_type == "e":
-
-                break
-            
+                    
             for i, wallet in enumerate(wallets_nfts):
 
                 wallet_address = wallet["address"]
@@ -3073,7 +3697,7 @@ while True:
 
                 break
         
-        if mode == 5:
+        if mode == 7:
             
             console.print(create_table_wallets(wallets))
             print()
@@ -3136,7 +3760,8 @@ while True:
                     
                         console.print("[green] Sweeper file created successfuly ![/]\n")                 
 
-                        start_sweeper = Prompt.ask("[purple] >>[/] Are you sure you want to continue? This will start the sweeper instantly", choices=["y", "n"])
+                        start_sweeper = Prompt.ask(
+                            "[purple] >>[/] Are you sure you want to continue? This will start the sweeper instantly", choices=["y", "n"])
                         
                     else:
                         
@@ -3325,16 +3950,18 @@ while True:
 
                     clear()
 
-                    console.print("[yellow] ERROR![/] [red]Invalid collection URL\n[/]")
+                    console.print(
+                        "[yellow] ERROR![/] [red]Invalid collection URL\n[/]")
                     
-        if mode == 6:
+        if mode == 8:
             
             console.print(create_table_wallets(wallets))
             print()
             
             wallet_choices = [wallet["name"].lower() for wallet in wallets] + ["e"]
 
-            selected_wallet = Prompt.ask("[purple] >>[/] Choose sniper wallet", choices=wallet_choices)
+            selected_wallet = Prompt.ask(
+                "[purple] >>[/] Choose sniper wallet", choices=wallet_choices)
 
             if selected_wallet == "e":
 
@@ -3350,7 +3977,8 @@ while True:
                 console.print(create_table_wallets([wallet]))
                 print()
 
-                token_mint = str(console.input("[purple] >>[/] WhiteList token address: ")).strip()
+                token_mint = str(console.input(
+                    "[purple] >>[/] WhiteList token address: ")).strip()
                 clear()
 
                 if token_mint == "e":
@@ -3380,7 +4008,8 @@ while True:
                     
                         console.print("[green] Sniper file created successfuly ![/]\n")                 
 
-                        start_sniper = Prompt.ask("[purple] >>[/] Are you sure you want to continue? This will start the sniper instantly", choices=["y", "n"])
+                        start_sniper = Prompt.ask(
+                            "[purple] >>[/] Are you sure you want to continue? This will start the sniper instantly", choices=["y", "n"])
                         
                         print()
 
@@ -3514,18 +4143,21 @@ while True:
                         
                         start_sniper = "n"
                         
+
                 else:
 
                     clear()
 
-                    console.print("[yellow] ERROR![/] [red]Invalid WhiteList token\n[/]")
+                    console.print(
+                        "[yellow] ERROR![/] [red]Invalid WhiteList token\n[/]")
 
-        if mode == 7:
+        if mode == 9:
             
             console.print(create_table_wallets(wallets))
             print()
 
-            user_cmid = str(console.input("[purple] >>[/] Candy Machine ID: ")).strip()
+            user_cmid = str(console.input(
+                "[purple] >>[/] Candy Machine ID: ")).strip()
 
             clear()
 
@@ -3533,14 +4165,15 @@ while True:
 
                 break
         
-        if mode == 8:
+        if mode == 10:
 
             console.print(create_table_wallets(wallets))
             print()
             
             wallet_choices = [wallet["name"].lower() for wallet in wallets] + ["e"]
 
-            selected_wallet = Prompt.ask("[purple] >>[/] Choose sniper wallet", choices=wallet_choices)
+            selected_wallet = Prompt.ask(
+                "[purple] >>[/] Choose sniper wallet", choices=wallet_choices)
 
             if selected_wallet == "e":
 
@@ -3572,7 +4205,8 @@ while True:
             
             console.print("[green] Sniper file created successfuly ![/]\n")                 
 
-            start_sniper = Prompt.ask("[purple] >>[/] Are you sure you want to continue? This will start the sniper instantly", choices=["y", "n"])
+            start_sniper = Prompt.ask(
+                "[purple] >>[/] Are you sure you want to continue? This will start the sniper instantly", choices=["y", "n"])
             
             print()
 
@@ -3866,12 +4500,13 @@ while True:
 
             clear()
 
-        if mode == 9:
+        if mode == 11:
                         
             console.print(create_table_wallets(wallets))
             print()
 
-            user_cmid = str(console.input("[purple] >>[/] Mint URL: ")).strip()
+            user_cmid = str(console.input(
+                "[purple] >>[/] Mint URL: ")).strip()
 
             clear()
 
@@ -3879,11 +4514,12 @@ while True:
 
                 break
         
-        if mode == 10:
+        if mode == 12:
             
             if not valid_sol_rpc:
 
-                console.input("[yellow] ERROR![/] [red]Invalid or unreachable RPC [/]", password=True)
+                console.input(
+                    "[yellow] ERROR![/] [red]Invalid or unreachable RPC [/]", password=True)
 
                 break
             
@@ -3895,58 +4531,67 @@ while True:
          
         if not menu:
 
-            if mode in [1, 2, 7, 9]:
+            if mode in [1, 2, 4, 9, 11]:
 
-                if mode in [1, 7, 9]:
-
-                    with console.status("[yellow]Validating Candy Machine ID[/]", spinner="bouncingBar", speed=1.5):
-                        
-                        if is_URL(url=user_cmid):
-                            
-                            if mode == 7:
-                                
-                                user_cmid = get_lmn_candy_machine(url=user_cmid)
-                            
-                            elif mode == 1:
-                                
-                                user_cmid = get_cmv2_candy_machine(url=user_cmid)
-                            
-                            elif mode == 9:
-                                
-                                user_cmid = get_ml_candy_machine(url=user_cmid)
-                                
-                        if user_cmid:
-                                                                
-                            program = check_cmid(user_cmid["REACT_APP_CONFIG_KEY"] if mode == 9 else user_cmid)
-                            
-                            if program:
-                                
-                                if mode == 1 and program == SolanaPrograms.CMV2_PROGRAM:
-                                    
-                                    CM = user_cmid
-                                    PROGRAM = program
-                                    
-                                elif mode == 7 and program == SolanaPrograms.LMN_PROGRAM:
-
-                                    CM = user_cmid
-                                    PROGRAM = program
-                                    
-                                elif mode == 9 and program == SolanaPrograms.ML_PROGRAM:
-                                    
-                                    CM = user_cmid
-                                    PROGRAM = SolanaPrograms.ML_PROGRAM
-                                    
-                if CM:
+                if mode == 4:
 
                     start = True
 
-                else:
+                elif mode in [1, 2, 9, 11]:
                     
-                    start = False
-                    
-                    clear()
+                    if mode in [1, 9, 11]:
 
-                    console.print("[yellow] ERROR![/] [red]Invalid Candy Machine ID or mint not available[/]\n")
+                        with console.status("[yellow]Validating Candy Machine ID[/]", spinner="bouncingBar", speed=1.5):
+                            
+                            if is_URL(url=user_cmid):
+                                
+                                if mode == 9:
+                                    
+                                    user_cmid = get_lmn_candy_machine(url=user_cmid)
+                                
+                                elif mode == 1:
+                                    
+                                    user_cmid = get_cmv2_candy_machine(url=user_cmid)
+                                
+                                elif mode == 11:
+                                    
+                                    user_cmid = get_ml_candy_machine(url=user_cmid)
+                                    
+                            if user_cmid:
+                                
+                                if mode in [1,9,11]:
+                                        
+                                    program = check_cmid(user_cmid["REACT_APP_CONFIG_KEY"] if mode == 11 else user_cmid)
+                                    
+                                    if program:
+                                        
+                                        if mode == 1 and program == SolanaPrograms.CMV2_PROGRAM:
+                                            
+                                            CM = user_cmid
+                                            PROGRAM = program
+                                            
+                                        elif mode == 9 and program == SolanaPrograms.LMN_PROGRAM:
+
+                                            CM = user_cmid
+                                            PROGRAM = program
+                                            
+                                        elif mode == 11 and program == SolanaPrograms.ML_PROGRAM:
+                                            
+                                            CM = user_cmid
+                                            PROGRAM = SolanaPrograms.ML_PROGRAM
+                                    
+                    if CM:
+
+                        start = True
+
+                    else:
+                        
+                        start = False
+                        
+                        clear()
+
+                        console.print(
+                            "[yellow] ERROR![/] [red]Invalid Candy Machine ID or mint not available[/]\n")
 
                 if start:
                     
@@ -3956,72 +4601,82 @@ while True:
 
                         clear()
 
-                        if mode in [1, 2, 7]:
+                        if wallets:
 
-                            with console.status(f"[yellow]Downloading candy machine data[/]", spinner="bouncingBar", speed=1.5):
+                            if mode in [1, 2, 9]:
 
-                                cm_metadata = asyncio.run(get_account_metadata("CandyMachine", CM, PROGRAM))
-                                
-                                if mode == 1:
+                                with console.status(f"[yellow]Downloading candy machine data[/]", spinner="bouncingBar", speed=1.5):
+
+                                    cm_metadata = asyncio.run(get_account_metadata("CandyMachine", CM, PROGRAM))
                                     
-                                    pda_account = get_collection_pda_account(cmid=CM)
+                                    if mode == 1:
+                                        
+                                        pda_account = get_collection_pda_account(cmid=CM)
 
-                                    collection_set_metadata = asyncio.run(get_account_metadata("CollectionPDA", pda_account, PROGRAM))
+                                        collection_set_metadata = asyncio.run(get_account_metadata("CollectionPDA", pda_account, PROGRAM))
 
-                                if cm_metadata:
-                                    
-                                    if mode in [1, 7]:
+                                    if cm_metadata:
+                                        
+                                        if mode in [1, 9]:
 
-                                        DROP_TIME = int(cm_metadata.data.go_live_date)
+                                            DROP_TIME = int(cm_metadata.data.go_live_date)
 
-                                else:
+                                    else:
 
-                                    clear()
+                                        clear()
 
-                                    console.print("[red] ERROR![/] [yellow]Failed to fetch candy machine data\n[/]")
+                                        console.print(
+                                            "[red] ERROR![/] [yellow]Failed to fetch candy machine data\n[/]")
 
-                                    break
+                                        break
 
-                        elif mode == 9:
-                            
-                            DROP_TIME = int(CM["REACT_APP_CANDY_START_DATE"])
-                            
-                        trs = []
-
-                        if user_time:
-
-                            now = datetime.now().strftime("%H:%M:%S")
-                            today_date = datetime.now().strftime("%Y-%m-%d")
-                            
-                            DROP_TIME = int(datetime.fromisoformat(f"{today_date}T{user_time}.000").timestamp())
-                            
-                            if user_time < now:
+                            elif mode == 11:
                                 
-                                DROP_TIME += 86400
-                        
-                        if first_commit:
+                                DROP_TIME = int(CM["REACT_APP_CANDY_START_DATE"])
+                                
+                            trs = []
+
+                            if user_time:
+
+                                now = datetime.now().strftime("%H:%M:%S")
+                                today_date = datetime.now().strftime("%Y-%m-%d")
+                                
+                                DROP_TIME = int(datetime.fromisoformat(f"{today_date}T{user_time}.000").timestamp())
+                                
+                                if user_time < now:
+                                    
+                                    DROP_TIME += 86400
                             
-                            DROP_TIME = int(time.time())
+                            if first_commit:
+                                
+                                DROP_TIME = int(time.time())
+                                
+                            for wallet in wallets:
+
+                                if wallet["tasks"]:
+
+                                    mintT = Thread(target=mint, args=[wallet])
+                                    mintT.start()
+                                    trs.append(mintT)
+
+                            for tr in trs:
+                                tr.join()
+
+                            if mode in [1, 2, 9, 11]:
+
+                                print()
+                                show_cm_status(cm=CM, program=PROGRAM)
                             
-                        for wallet in wallets:
+                            first_commit = True
 
-                            if wallet["tasks"]:
+                        else:
 
-                                mintT = Thread(target=mint, args=[wallet])
-                                mintT.start()
-                                trs.append(mintT)
-
-                        for tr in trs:
-                            tr.join()
-
-                        print()
-                        show_cm_status(cm=CM, program=PROGRAM)
-                        
-                        first_commit = True
+                            break
 
                         print("\n")
 
-                        status = Prompt.ask("[purple]>>[/] Insert 'e' to exit or 'r' to retry mint", choices=["e", "r"])
+                        status = Prompt.ask(
+                            "[purple]>>[/] Insert 'e' to exit or 'r' to retry mint", choices=["e", "r"])
 
                         print("\n")
 

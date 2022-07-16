@@ -12,7 +12,7 @@ import time
 
 try:
     
-    from lib import AccountClient
+    from lib.idl import AccountClient
     
 except:
     
@@ -143,9 +143,15 @@ webhook = "https://discord.com/api/webhooks/981326567613538336/l4SjS3_jC8BDm0PGj
 
 while True:
     
-    collection = scraper.post('https://search.launchmynft.io/indexes/collections/search', headers=headers, json=json_data).json()["hits"][0]
+    try:
+        
+        collection = scraper.post('https://search.launchmynft.io/indexes/collections/search', headers=headers, json=json_data).json()["hits"][0]
 
-    if collection.get("description") and collection.get("collectionCoverUrl") and collection.get("collectionBannerUrl"):
+    except:
+        
+        collection = None
+        
+    if collection and collection.get("description") and collection.get("collectionCoverUrl") and collection.get("collectionBannerUrl"):
         
         id = collection["id"]
         

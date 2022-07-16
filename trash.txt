@@ -4,6 +4,8 @@ https://eu-node.hydrascriptsnft.com/
 
 https://solstake.rpcpool.com/
 
+https://discord.com/api/webhooks/974346899521937549/p4XwuCyJv541UM_jfHOWPyDf2hyY2AeoynBKpdSVFg5vkCTOEc1x2w92A9XX0gaLd5FW
+
 bot-test-token: OTM3NjYzMDU2NDcxNzg1NDgy.GLUXu3.3_c9RD6P7G6I2LG-ux_k7mgNSaSlP4paHg8i_U
 https://staratlasexchange.genesysgo.net/
 https://sonar.genesysgo.net/

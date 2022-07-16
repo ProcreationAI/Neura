@@ -267,10 +267,8 @@ me = MagicEden(
     privkey="59c95GpudN8Ks6UJDDHAmJ59yhTVFz74Fh2SbtfbtxfVEtEn2H1KxbQZEMydRwbqBmBdEdrB22ZW9YxZNXqiWZFX"
 )
 
-
-a = me.get_collection_attributes("trippincettribe")
-
-print(a)
+wh = ""
+print(["asd"] + ([wh] if wh else []))
 
 """ i = 10
 until_tx = None
