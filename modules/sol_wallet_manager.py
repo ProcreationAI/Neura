@@ -92,8 +92,7 @@ class SolWalletManager():
                     )
                 )
 
-            tokenholder = PublicKey(self.client.get_token_largest_accounts(
-                mint_address)['result']['value'][0]['address'])
+            tokenholder = PublicKey(self.client.get_token_largest_accounts(mint_address)['result']['value'][0]['address'])
 
             transaction.add(
                 transfer_checked(

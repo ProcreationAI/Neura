@@ -2367,10 +2367,6 @@ while True:
 
                             break
 
-                        else:
-                            
-                            pass
-
                     else:
                         
                         console.print("[yellow] ERROR![/] [red]Collection not found\n [/]")
