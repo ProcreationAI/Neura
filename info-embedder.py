@@ -20,13 +20,6 @@ value = """
 embed.add_field(name="**Candy Machine v2 minting** :candy:", value=value, inline=False)
 
 value = """
-- Transaction speeding and cancelation 
-- Gas manager 
-- Custom wallets, tasks and delay 
-"""
-embed.add_field(name="**Ethereum contract minting** <:Ethereum:918873522053455934>", value=value, inline=False)
-
-value = """
 - Auto-scheduling
 - Anti-bot bypass
 - Proxy support 
@@ -48,12 +41,13 @@ embed.add_field(name="**MonkeLabs minting** :monkey_face:", value=value, inline=
 
 value = """
 - Blockchain based 
-- Filtered sniping (max and min price, floor %)
+- Filtered sniping (fixed min and max price, floor price %)
 - Add ranks
 - Add attributes 
 - Auto-lister (sniped price %, floor price %, highest trait %)
 - In-time floor monitor
 - Multiple collections
+- Webhook support
 """
 embed.add_field(name="**MagicEden & CoralCube sniper** :dart:", value=value, inline=False)
 
@@ -63,14 +57,7 @@ value = """
 embed.add_field(name="**FamousFox sniper** <:angyfox:911451631093178378>", value=value, inline=False)
 
 value = """
-- By price 
-- By attributes 
-- In-time floor monitor
-"""
-embed.add_field(name="**OpenSea sniper** <:OpenSeaLogo:862443378461638697>", value=value, inline=False)
-
-value = """
-- Mass listing 
+- Mass listing (fixed price or highest trait floor)
 - Mass delisting 
 - Funds transfer 
 - NFT transfer
@@ -80,9 +67,9 @@ embed.add_field(name="**Solana wallets manager** :briefcase:", value=value, inli
 
 value = """
 - Candy Machine ID scraper 
-- ME new listings monitor
+- ME new listings
 - ME collection data scraper
-- LaunchMyNFT new candys
+- LaunchMyNFT new listings
 """
 embed.add_field(name="**Discord monitors and tools** :gear:", value=value, inline=False)
 

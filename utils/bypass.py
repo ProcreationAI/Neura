@@ -1,12 +1,15 @@
 import json
 import cloudscraper
+import subprocess
+import time
+import requests
 
 try:
     import helheim
 except:
     pass
 
-from .constants import *
+from .constants import Paths, Keys
 
 def injection(session, response):
 
@@ -109,3 +112,18 @@ def create_tls_payload(url: str, method: str, headers: dict, params: dict | list
     }
 
 
+def start_tls():
+
+    subprocess.Popen(
+        [Paths.TLS_PATH],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+
+    time.sleep(0.5)
+    
+    headers = {
+        "Authorization": Keys.TLS_KEY
+    }
+
+    requests.post('http://127.0.0.1:3000/authenticate', headers=headers, timeout=4)

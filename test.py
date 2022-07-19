@@ -262,22 +262,14 @@ sol_rpc = "http://142.132.134.62:8899/"
 client = Client(sol_rpc)
 
 
-me = MagicEden(
-    rpc=sol_rpc,
-    privkey="59c95GpudN8Ks6UJDDHAmJ59yhTVFz74Fh2SbtfbtxfVEtEn2H1KxbQZEMydRwbqBmBdEdrB22ZW9YxZNXqiWZFX"
-)
-
-wh = ""
-print(["asd"] + ([wh] if wh else []))
-
-""" i = 10
+i = 10
 until_tx = None
 recent_txs = []
 
 while i:
-        
+    
     last_txs = get_account_last_txs(
-        account="1BWutmTvYPwDtmw9abTkS4Ssr8no61spGAvW1X6NDix", 
+        account="hausS13jsjafwWwGqZTUQRmWyvyxn9EQpqMwV1PBBmk", 
         limit=10, 
         commitment="confirmed",
         until=until_tx
@@ -299,4 +291,4 @@ while i:
         until_tx = last_txs[0]["signature"]
         i -= 1
 
-        print("="*50) """
+        print("="*50)

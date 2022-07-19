@@ -1,2 +1,2 @@
-Amount,MaxPrice,MinRank,MaxRank,Background,Clothing,Face,Fur,Necklace,Weapon,Mouth,Eyes,Earings,Headware,Eyewear,Hands,Hand Jewelry
-,0.6,,,,,,,,,,,,,,,
+Amount,MaxFunds,UnderPrice,MinRank,MaxRank,Background,Body,Ears,Eyes,Head,Accessory,Rarity Rank
+,,,,,,,,,,,

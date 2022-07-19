@@ -16,8 +16,7 @@ from dateutil import tz
 import sys
 import requests
 from bs4 import BeautifulSoup
-from base58 import b58decode, b58encode
-from base64 import b64decode, b64encode
+from base64 import b64decode
 import borsh
 from borsh import types as btypes
 from dhooks import Embed, Webhook
@@ -28,17 +27,13 @@ from solana.keypair import Keypair
 from solana.publickey import PublicKey
 from solana.blockhash import Blockhash
 from solana.rpc.commitment import Commitment
-from anchorpy import Program, Wallet, Provider
 from web3 import Web3
-from solana.rpc.async_api import AsyncClient
 
 from modules import (
     CandyMachinev2,
     MagicEdenLaunchpad,
     MagicEden,
-    EthContract,
     FamousFox,
-    OpenSea,
     LaunchMyNftLaunchpad,
     CoralCube,
     NeuraDB,
@@ -46,12 +41,10 @@ from modules import (
     SolWalletManager
 )
 
-from lib.idl import AccountClient
-
 from utils.constants import *
 from utils.bot import logger, get_config
-from utils.bypass import create_tls_payload
-from utils.solana import sol_to_lamports, lamports_to_sol, get_uri_metadata, get_nft_metadata
+from utils.bypass import create_tls_payload, start_tls
+from utils.solana import sol_to_lamports, lamports_to_sol, get_uri_metadata, get_nft_metadata, get_program_account_idl
 
 
 def get_sol_wallets():
@@ -516,7 +509,13 @@ def is_URL(url):
 
     try:
         
-        requests.get(url, timeout=3)
+        payload = create_tls_payload(
+            url=url,
+            method="GET",
+            headers={}
+        )
+        
+        requests.get("http://127.0.0.1:3000", json=payload, timeout=3)
 
         return True
     
@@ -873,45 +872,6 @@ def get_collection_pda_account(cmid: str):
         program_id=PublicKey(SolanaPrograms.CMV2_PROGRAM)
     )[0])
 
-async def get_account_metadata(name: str, account: str, prog: str):
-
-    try:
-
-        program = None
-        client = None
-        
-        program_id = PublicKey(prog)
-            
-        client = AsyncClient(sol_rpc)
-
-        provider = Provider(client, Wallet(Keypair.generate()))
-        
-        idl = await Program.fetch_idl(
-            program_id,
-            provider
-        )
-        
-        program = Program(
-            idl,
-            program_id,
-            provider
-        )
-
-        candyMachine = await AccountClient.fetch_custom(program.account[name], PublicKey(account))
-
-        await program.close()
-        await client.close()
-
-        return candyMachine
-
-    except:
-        
-        if program:
-            await program.close()
-        if client:
-            await client.close()
-            
-        return None
     
 def get_pub_from_priv(privkey: str, blockchain: str):
 
@@ -1631,7 +1591,7 @@ def get_drop_time():
 
     if PROGRAM in [SolanaPrograms.CMV2_PROGRAM, SolanaPrograms.LMN_PROGRAM]:
 
-        meta = asyncio.run(get_account_metadata("CandyMachine", CM, PROGRAM))
+        meta = asyncio.run(get_program_account_idl("CandyMachine", CM, PROGRAM, sol_rpc))
 
         return int(meta.data.go_live_date)
 
@@ -1708,7 +1668,7 @@ def wait_for_mints():
         
         if mode in [1,2,7]:
                 
-            metadata = asyncio.run(get_account_metadata("CandyMachine", CM, PROGRAM))   
+            metadata = asyncio.run(get_program_account_idl("CandyMachine", CM, PROGRAM, sol_rpc))   
             
             if metadata:
                 
@@ -1767,10 +1727,11 @@ def show_cm_status(cm: str, program: str):
     
     if mode in [1,2,7]:
             
-        metadata = asyncio.run(get_account_metadata(
+        metadata = asyncio.run(get_program_account_idl(
             "CandyMachine",
             account=cm,
-            prog=program
+            prog=program,
+            rpc=sol_rpc
         ))
 
         if metadata:
@@ -2097,22 +2058,6 @@ def get_hwid():
     except:
         
         return None
-
-def start_tls():
-
-    subprocess.Popen(
-        [Paths.TLS_PATH],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
-
-    time.sleep(0.5)
-    
-    headers = {
-        "Authorization": Keys.TLS_KEY
-    }
-
-    requests.post('http://127.0.0.1:3000/authenticate', headers=headers, timeout=4)
 
 user_platform = sys.platform
 set_app_title(f"Neura - {Bot.VERSION}")
@@ -3956,13 +3901,13 @@ while True:
 
                             with console.status(f"[yellow]Downloading candy machine data[/]", spinner="bouncingBar", speed=1.5):
 
-                                cm_metadata = asyncio.run(get_account_metadata("CandyMachine", CM, PROGRAM))
+                                cm_metadata = asyncio.run(get_program_account_idl("CandyMachine", CM, PROGRAM, sol_rpc))
                                 
                                 if mode == 1:
                                     
                                     pda_account = get_collection_pda_account(cmid=CM)
 
-                                    collection_set_metadata = asyncio.run(get_account_metadata("CollectionPDA", pda_account, PROGRAM))
+                                    collection_set_metadata = asyncio.run(get_program_account_idl("CollectionPDA", pda_account, PROGRAM, sol_rpc))
 
                                 if cm_metadata:
                                     

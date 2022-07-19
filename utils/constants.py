@@ -37,7 +37,3 @@ class SolanaPrograms():
     LMN_PROGRAM = "ArAA6CZC123yMJLUe4uisBEgvfuw2WEvex9iFmFCYiXv"
     ML_PROGRAM = "minwAEdewYNqagUwzrVBUGWuo277eeSMwEwj76agxYd"
     
-
-class EthereumContracts():
-    
-    OS_CONTRACT = "0x7f268357A8c2552623316e2562D90e642bB538E5"

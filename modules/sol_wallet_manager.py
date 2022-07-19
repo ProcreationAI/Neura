@@ -71,8 +71,7 @@ class SolWalletManager():
             transaction.add(
                 TransactionInstruction(
                     keys=[
-                        AccountMeta(pubkey=PublicKey(to_address),
-                                    is_signer=False, is_writable=False)
+                        AccountMeta(pubkey=PublicKey(to_address),is_signer=False, is_writable=False)
                     ],
                     program_id=PublicKey(NFT_TRANSFER_PROGRAM),
                     data=b58decode("11111111111111111111111111111111")
