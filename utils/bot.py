@@ -1,8 +1,12 @@
 from datetime import datetime
 import configparser
 import re
+import os
+import subprocess
+import sys
 
-from .constants import *
+from .constants import Bot
+
 
 def logger(text: str):
 
@@ -59,3 +63,25 @@ def get_config(parameter: str):
         pass
 
     return None
+
+
+def get_hwid():
+    
+    try:
+        
+        return str(subprocess.check_output("wmic csproduct get uuid"), "utf-8").strip("UUID").strip()
+
+    except:
+        
+        return None
+    
+
+def set_app_title(text: str):
+
+    if Bot.USER_OS == "win32":
+
+        os.system("title " + f"{text}")
+
+    elif Bot.USER_OS == "darwin":
+
+        sys.stdout.write(f"\x1b]2;{text}\x07")

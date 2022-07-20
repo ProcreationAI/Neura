@@ -10,10 +10,8 @@ from rich.table import Table
 import base58
 import csv
 import time
-import subprocess
 import asyncio
 from dateutil import tz
-import sys
 import requests
 from bs4 import BeautifulSoup
 from base64 import b64decode
@@ -41,8 +39,8 @@ from modules import (
     SolWalletManager
 )
 
-from utils.constants import *
-from utils.bot import logger, get_config
+from utils.constants import Bot, Discord, SolanaPrograms, SolanaEndpoints, Keys
+from utils.bot import logger, get_config, get_hwid, set_app_title
 from utils.bypass import create_tls_payload, start_tls
 from utils.solana import sol_to_lamports, lamports_to_sol, get_uri_metadata, get_nft_metadata, get_program_account_idl
 
@@ -108,11 +106,11 @@ def get_sol_wallets():
 
 def clear(newline: bool = True):
 
-    if user_platform == "darwin":
+    if Bot.USER_OS == "darwin":
 
         os.system("clear")
 
-    elif user_platform == "win32":
+    elif Bot.USER_OS == "win32":
 
         os.system('cls')
 
@@ -1709,18 +1707,6 @@ def create_table_wallets(wallets: list):
         return table
 
 
-def set_app_title(text: str):
-
-    if user_platform == "win32":
-
-        os.system("title " + f"{text}")
-
-    elif user_platform == "darwin":
-
-        sys.stdout.write(f"\x1b]2;{text}\x07")
-
-
-
 def show_cm_status(cm: str, program: str):
 
     available = redeemed = None
@@ -2049,17 +2035,8 @@ def get_module():
         console.print("[red]    Invalid option provided[/]")
 
 
-def get_hwid():
-    
-    try:
-        
-        return str(subprocess.check_output("wmic csproduct get uuid"), "utf-8").strip("UUID").strip()
 
-    except:
-        
-        return None
 
-user_platform = sys.platform
 set_app_title(f"Neura - {Bot.VERSION}")
 console = Console(highlight=False, log_path=False)
 
@@ -2073,7 +2050,7 @@ try:
     
 except:
     
-    helheim_auth = False
+    helheim_auth = True
     
 
 try:
@@ -2093,7 +2070,7 @@ while True:
 
     clear()
 
-    if user_platform == "darwin":
+    if Bot.USER_OS == "darwin":
         
         break
     
@@ -2128,23 +2105,22 @@ while True:
 
                         if holder_pubkey:
                             
-                            holder_nft = wallet_is_holder(
-                                pubkey=holder_pubkey, hashlist=neura_hashlist)
+                            holder_nft = wallet_is_holder(pubkey=holder_pubkey, hashlist=neura_hashlist)
 
                             if holder_nft:
 
-                                access = database.check_holder_access(
-                                    holder_nft, holder_pubkey, user_hwid)
+                                access = database.check_holder_access(holder_nft, holder_pubkey, user_hwid)
 
                                 if access:
 
                                     break
 
                                 else:
-                                    console.input("[yellow] ERROR![/] [red]Provided holder wallet is already in use [/]", password=True)
+                                    
+                                    console.input("[yellow] ERROR![/] [red]Provided Neura NFT pass is already in use [/]", password=True)
 
                             else:
-                                console.input("[yellow] ERROR![/] [red]Provided holder wallet has no Neura NFT [/]", password=True)
+                                console.input("[yellow] ERROR![/] [red]Provided holder wallet has no Neura NFT pass [/]", password=True)
                         else:
 
                             console.input("[yellow] ERROR![/] [red]Invalid holder wallet provided[/]", password=True)
@@ -2166,22 +2142,16 @@ while True:
 
     clear()
 
-    if not all(file in os.listdir(os.path.join(os.getcwd(), "bin")) for file in ["TLS.exe", "bifrost.dll"]):
+    try:
+        
+        start_tls()
+
+        break
+
+    except:
 
         console.input("[yellow] ERROR![/] [red]Some of the Neura config files are missing, please contact support [/]", password=True)
 
-    else:
-            
-        try:
-            
-            start_tls()
-
-            break
-
-        except:
-
-            console.input("[yellow] ERROR![/] [red]Some of the Neura config files are missing, please contact support [/]", password=True)
-    
     
 while True:
 
