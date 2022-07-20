@@ -65,7 +65,7 @@ def get_sol_wallets():
 
                     name = name if len(name) <= 9 else name[:9]
 
-                    address = get_pub_from_priv(privkey, blockchain="sol")
+                    address = get_pub_from_priv(privkey)
 
                     if address:
 
@@ -130,7 +130,7 @@ def mint(wallet: dict):
     
     console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Initialazing mint[/]\n".format(name, f"0/{tasks}", show_drop_time)), end="")
 
-    if (auto_timer and mode != 11) or user_time:
+    if mode != 9 or user_time:
 
         console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for drop time[/]\n".format(name, f"0/{tasks}", show_drop_time)), end="")
 
@@ -156,7 +156,7 @@ def mint(wallet: dict):
 
             console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [red]Unable to initialize txs (node)[/]\n".format(name, f"0/{tasks}", show_drop_time)), end="")
             
-    if (auto_timer and mode != 11) or user_time:
+    if mode != 9 or user_time:
         
         wait_for_drop()
             
@@ -486,19 +486,20 @@ def get_lmn_candy_machine(url: str):
     
     
     try:
+
         res = requests.get(url, timeout=5).text
 
         soup = BeautifulSoup(res, "lxml")
 
         cm_info_script = soup.find("script", {"id": "__NEXT_DATA__"})
-        
+
         if cm_info_script:
-            
+
             return json.loads(cm_info_script.text)["props"]["pageProps"]["collection"]["newCandyMachineAccountId"]
                 
     
     except:
-        
+
         pass
     
     return None
@@ -513,13 +514,13 @@ def is_URL(url):
             headers={}
         )
         
-        requests.get("http://127.0.0.1:3000", json=payload, timeout=3)
+        res = requests.post("http://127.0.0.1:3000", json=payload, timeout=3).json()
 
-        return True
+        return res["statusCode"] == 200
     
     except:
         
-        return None
+        return False
     
 def get_scripts(url: str):
 
@@ -757,7 +758,6 @@ def get_launchpad_collection(url: str):
         }
         
         url = f"https://api-mainnet.magiceden.io/launchpads/{symbol}"
-        
 
         payload = create_tls_payload(
             url=url,
@@ -798,33 +798,19 @@ def get_launchpad_collection(url: str):
         return None
 
 
-def get_wallet_balance(pubkey: str, blockchain: str):
+def get_wallet_balance(pubkey: str):
 
-    if blockchain == "sol":
+    try:
 
-        try:
+        client = Client(sol_rpc)
 
-            client = Client(sol_rpc)
+        balance = client.get_balance(pubkey)
 
-            balance = client.get_balance(pubkey)
+        return balance["result"]["value"]
 
-            return balance["result"]["value"]
+    except:
 
-        except:
-
-            return 0
-
-    elif blockchain == "eth":
-
-        try:
-
-            w3conn = Web3(Web3.HTTPProvider(eth_rpc))
-
-            return w3conn.eth.get_balance(pubkey)
-
-        except:
-
-            return 0
+        return 0
 
 
 def get_wallet_nfts(wallet: str):
@@ -871,32 +857,16 @@ def get_collection_pda_account(cmid: str):
     )[0])
 
     
-def get_pub_from_priv(privkey: str, blockchain: str):
+def get_pub_from_priv(privkey: str):
 
-    if blockchain == "sol":
+    try:
+        wallet = Keypair.from_secret_key(base58.b58decode(privkey))
 
-        try:
-            wallet = Keypair.from_secret_key(base58.b58decode(privkey))
+        return str(wallet.public_key)
 
-            pubkey = str(wallet.public_key)
+    except:
 
-        except:
-
-            return None
-
-    if blockchain == "eth":
-
-        w3conn = Web3(Web3.HTTPProvider(eth_rpc))
-
-        try:
-
-            pubkey = w3conn.eth.account.privateKeyToAccount(privkey).address
-
-        except:
-
-            return None
-
-    return pubkey
+        return None
 
 
 def wallet_is_holder(pubkey: str, hashlist: list):
@@ -1653,8 +1623,7 @@ def wait_for_drop(exit_before: int = 0):
 
                 show_new_time = datetime.fromtimestamp(DROP_TIME).strftime("%H:%M:%S")
                 
-                console.print(
-                    logger(f"[BOT] [yellow]Found time reschedule to {show_new_time}[/]\n"), end="")
+                console.print(logger(f"[BOT] [yellow]Found time reschedule to {show_new_time}[/]\n"), end="")
 
 
 
@@ -1700,7 +1669,7 @@ def create_table_wallets(wallets: list):
         
         for wallet in wallets:
 
-            balance = get_wallet_balance(wallet["address"], blockchain="sol")
+            balance = get_wallet_balance(wallet["address"])
 
             table.add_row(wallet["name"], wallet["address"], str(wallet["tasks"]), str(round(lamports_to_sol(balance), 2)))
 
@@ -2101,7 +2070,7 @@ while True:
 
                     if neura_hashlist:
                         
-                        holder_pubkey = get_pub_from_priv(privkey=nft_holder, blockchain="sol")
+                        holder_pubkey = get_pub_from_priv(nft_holder)
 
                         if holder_pubkey:
                             
@@ -2166,7 +2135,6 @@ while True:
     eth_rpc = get_config(parameter="eth_rpc")
     user_time = get_config(parameter="time")
     advanced_mode = get_config(parameter="advanced")
-    auto_timer = get_config(parameter="auto_timer")
     await_mints = get_config(parameter="await_mints")
     success_webhook = get_config(parameter="webhook")
     
@@ -2189,7 +2157,9 @@ while True:
 
     if user_time:
 
-        console.print(" {:<10} [green]{:<5}[/] [purple]> [/]{}".format("Time:", "ON", user_time))
+        show_user_time = datetime.fromtimestamp(user_time).strftime("%H:%M:%S")
+        
+        console.print(" {:<10} [green]{:<5}[/] [purple]> [/]{}".format("Time:", "ON", show_user_time))
 
     else:
 
@@ -2659,7 +2629,7 @@ while True:
                             
                             break
                         
-                        balance = get_wallet_balance(wallet["address"], blockchain="sol")
+                        balance = get_wallet_balance(wallet["address"])
 
                         nfts_data = []
 
@@ -3827,7 +3797,7 @@ while True:
                                 user_cmid = get_ml_candy_machine(url=user_cmid)
                                 
                         if user_cmid:
-                                                                
+                                                   
                             program = check_cmid(user_cmid["REACT_APP_CONFIG_KEY"] if mode == 9 else user_cmid)
                             
                             if program:
@@ -3901,14 +3871,7 @@ while True:
 
                         if user_time:
 
-                            now = datetime.now().strftime("%H:%M:%S")
-                            today_date = datetime.now().strftime("%Y-%m-%d")
-                            
-                            DROP_TIME = int(datetime.fromisoformat(f"{today_date}T{user_time}.000").timestamp())
-                            
-                            if user_time < now:
-                                
-                                DROP_TIME += 86400
+                            DROP_TIME = user_time
                         
                         if first_commit:
                             

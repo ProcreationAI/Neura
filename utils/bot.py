@@ -31,12 +31,12 @@ def get_config(parameter: str):
             return str(value)
 
         elif parameter == "time":
+            
+            value = int(value)
+            
+            datetime.fromtimestamp(value)
 
-            if re.match("^[0-9][0-9]:[0-9][0-9]:[0-9][0-9]$", value):
-
-                datetime.strptime(value, "%H:%M:%S")
-
-                return value
+            return value if value > int(datetime.now().timestamp()) else int(datetime.now().timestamp())
 
         elif parameter in ["sol_rpc", "eth_rpc"]:
 
@@ -44,10 +44,6 @@ def get_config(parameter: str):
 
         elif parameter == "advanced":
 
-            return str(value).lower() == "y"
-            
-        elif parameter == "auto_timer":
-            
             return str(value).lower() == "y"
         
         elif parameter == "await_mints":
