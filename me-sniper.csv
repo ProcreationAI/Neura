@@ -1,2 +1,2 @@
-Collection,MinPrice,MaxPrice,UnderFloor(%),MinRank,MaxRank,Attributes,AutoListByPrice(%),AutoListByFloor(%),AutoListByTrait(%)
-zomboid,0,1,,0,10000,,,,
+Collection,MinPrice,MaxPrice,UnderFloor(%),MinRank,MaxRank,Attributes,AutoListByPrice(%),AutoListByFloor(%)
+,,,,,,,,

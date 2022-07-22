@@ -25,7 +25,6 @@ from solana.keypair import Keypair
 from solana.publickey import PublicKey
 from solana.blockhash import Blockhash
 from solana.rpc.commitment import Commitment
-from web3 import Web3
 
 from modules import (
     CandyMachinev2,
@@ -71,9 +70,9 @@ def get_sol_wallets():
 
                         try:
 
-                            tasks = int(tasks)
+                            tasks = int(tasks) if int(tasks) > 0 else 0
 
-                            if mode in [1, 2, 7, 9]:
+                            if mode in [1, 2, 7, 9] and tasks:
                                     
                                 if tasks > max_tasks:
 
@@ -737,65 +736,7 @@ def show_banner():
     print("\n")
 
 
-def get_launchpad_collection(url: str):
 
-    try:
-        
-        symbol = get_collection_symbol(url=url)
-        
-        headers = {
-            'authority': 'api-mainnet.magiceden.io',
-            'accept': 'application/json, text/plain, */*',
-            'origin': 'https://magiceden.io',
-            'referer': 'https://magiceden.io/',
-            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="101", "Google Chrome";v="101"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"macOS"',
-            'sec-fetch-dest': 'empty',
-            'sec-fetch-mode': 'cors',
-            'sec-fetch-site': 'same-site',
-            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36',
-        }
-        
-        url = f"https://api-mainnet.magiceden.io/launchpads/{symbol}"
-
-        payload = create_tls_payload(
-            url=url,
-            method="GET",
-            headers=headers
-        )
-
-        collection = requests.post('http://127.0.0.1:3000', json=payload, timeout=10).json()
-        
-        collection = json.loads(collection["body"])
-
-        stage = collection["state"]["stages"][-1]
-
-        _time = int(datetime.fromisoformat(stage["startTime"][:-1]).timestamp())
-        _time = get_local_time(_time)
-        
-        if "fixedLimit" in stage["walletLimit"]:
-        
-            wallet_limit = stage["walletLimit"]["fixedLimit"]["limit"]
-            
-        else:
-            
-            wallet_limit = None
-
-        price = stage["price"]
-        
-        return {
-            "name": collection["name"],
-            "price": price,
-            "supply": collection["size"],
-            "cmid": collection["mint"]["candyMachineId"],
-            "walletLimit": wallet_limit,
-            "date": _time,
-        }
-                
-    except:
-        
-        return None
 
 
 def get_wallet_balance(pubkey: str):
@@ -911,6 +852,10 @@ def get_local_time(_time: int):
 
 def create_table_launchpad(collection: dict):
 
+    global DROP_TIME
+    
+    _time = get_local_time(DROP_TIME)
+    
     table = Table()
 
     table.add_column("NAME", justify="center", style="yellow")
@@ -920,8 +865,7 @@ def create_table_launchpad(collection: dict):
     table.add_column("SUPPLY", justify="center", style="cyan")
     table.add_column("PRICE", justify="center", style="cyan")
     
-    table.add_row(
-        collection["name"], datetime.fromtimestamp(DROP_TIME).strftime("%H:%M:%S"), collection["cmid"], str(collection["supply"]), str(lamports_to_sol(collection["price"])) + " SOL")
+    table.add_row(collection["name"], datetime.fromtimestamp(_time).strftime("%H:%M:%S"), collection["cmid"], str(collection["supply"]), str(lamports_to_sol(collection["price"])) + " SOL")
 
     return table
 
@@ -1088,13 +1032,7 @@ def get_me_collection_metadata(symbol: str):
             
             uri = nft_metadata["data"]["uri"]
             
-            try:
-                
-                uri_metadata = requests.get(uri).json()
-                
-            except:
-                
-                uri_metadata = None
+            uri_metadata = get_uri_metadata(uri=uri)
                 
             if uri_metadata:
                                 
@@ -1130,13 +1068,7 @@ def get_cc_collection_metadata(symbol: str):
             
             uri = nft_metadata["data"]["uri"]
             
-            try:
-                
-                uri_metadata = requests.get(uri).json()
-                
-            except:
-                
-                uri_metadata = None
+            uri_metadata = get_uri_metadata(uri=uri)
                 
             if uri_metadata:
                                 
@@ -1161,9 +1093,9 @@ def get_account_last_txs(account: str, limit: int, commitment: str, until: str =
         
         client = Client(sol_rpc)
         
-        tx = client.get_signatures_for_address(account=account, limit=limit, commitment=Commitment(commitment), until=until)["result"]
+        txs = client.get_signatures_for_address(account=account, limit=limit, commitment=Commitment(commitment), until=until)["result"]
 
-        return tx
+        return txs
 
     except:
                 
@@ -1214,8 +1146,7 @@ def get_sweeper_data(file_name: str):
         elif sweeper_data["UnderPrice"] and float(sweeper_data["UnderPrice"]) > 0:
             
             sweeper_data["UnderPrice"] = float(sweeper_data["UnderPrice"])
-            
-                                                        
+                                             
         else:
             
             return None
@@ -1565,18 +1496,14 @@ def get_drop_time():
 
     elif PROGRAM == SolanaPrograms.ME_PROGRAM:
 
-        collection = get_launchpad_collection(collection_url)
+        collection = MagicEdenLaunchpad.get_collection_info(collection_url)
 
-        if collection:
-
-            return collection["date"]
+        return collection["date"] if collection else None
 
     elif PROGRAM == SolanaPrograms.ML_PROGRAM:
         
         return int(CM["REACT_APP_CANDY_START_DATE"])
     
-    return None
-
 
 def validate_sol_rpc(rpc: str):
 
@@ -1975,6 +1902,7 @@ def check_node_health():
             console.print(f" [yellow]Your node is behind by[/] [white]{delay}[/] [yellow]slots[yellow]")
             
             time.sleep(0.5)
+            
     except:
         
         console.print(f" [red]Unreachable node[/]")
@@ -2234,7 +2162,7 @@ while True:
 
                     with console.status("[yellow]Searching for collection[/]", spinner="bouncingBar", speed=1.5):
 
-                        collection = get_launchpad_collection(collection_url)
+                        collection = MagicEdenLaunchpad.get_collection_info(collection_url)
 
                     if collection:
 
@@ -2635,15 +2563,15 @@ while True:
 
                         for nft in wallet_nfts:
                                                         
-                                if operation_type in ["l", "ts", "tn", "b"]:
+                            if operation_type in ["l", "ts", "tn", "b"]:
 
-                                    if nft.get("collectionName") or nft["onChainCollection"].get("key"):
-                                        
-                                        nfts_data.append({"mint": nft["mintAddress"], "name": nft["title"], "token": nft["id"], "symbol": nft.get("collectionName") or nft["onChainCollection"].get("key"), "attributes": nft["attributes"]})
+                                if nft.get("collectionName") or nft["onChainCollection"].get("key"):
+                                    
+                                    nfts_data.append({"mint": nft["mintAddress"], "name": nft["title"], "token": nft["id"], "symbol": nft.get("collectionName") or nft["onChainCollection"].get("key"), "attributes": nft["attributes"]})
 
-                                elif operation_type in ["d", "u"]:
+                            elif operation_type in ["d", "u"]:
 
-                                    nfts_data.append({"mint": nft["initializerDepositTokenMintAddress"], "name": nft["title"], "token": nft["initializerDepositTokenAccount"], "price": lamports_to_sol(nft["takerAmount"])})
+                                nfts_data.append({"mint": nft["initializerDepositTokenMintAddress"], "name": nft["title"], "token": nft["initializerDepositTokenAccount"], "price": lamports_to_sol(nft["takerAmount"]), "attributes": nft["attributes"], "symbol": nft.get("collectionSymbol") or nft.get("onChainCollectionAddress")})
                             
                         sorted_names = sorted([nft["name"] for nft in nfts_data])
 

@@ -224,7 +224,9 @@ class MonkeLabsLaunchpad():
             
             self.transaction.sign(*self.signers)
             
-            tx = self.transaction.serialize()
+            self.transaction.fee_payer = self.payer.public_key
+            
+            tx = self.transaction.serialize(verify_signatures=False)
 
             tx_hash = self.client.send_raw_transaction(tx, OPTS)['result']
             

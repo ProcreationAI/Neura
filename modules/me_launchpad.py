@@ -13,6 +13,9 @@ from requests.structures import CaseInsensitiveDict
 from anchorpy import Program, Wallet, Provider
 from solana.rpc.async_api import AsyncClient
 import requests
+from urllib.parse import urlsplit
+import json
+from datetime import datetime
 
 from utils.bypass import create_tls_payload
 
@@ -44,7 +47,70 @@ class MagicEdenLaunchpad():
         self.async_client = AsyncClient(rpc)
         
         self.payer = Keypair.from_secret_key(b58decode(privkey))
+
+
+    @staticmethod
+    def get_collection_info(url: str):
         
+        split_url = urlsplit(url)
+
+        symbol = split_url.path.split("/")[-1]
+        
+        url = f"https://api-mainnet.magiceden.io/launchpads/{symbol}"
+        
+        headers = {
+            'authority': 'api-mainnet.magiceden.io',
+            'accept': 'application/json, text/plain, */*',
+            'origin': 'https://magiceden.io',
+            'referer': 'https://magiceden.io/',
+            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="101", "Google Chrome";v="101"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"macOS"',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-site',
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36',
+        }
+        
+        payload = create_tls_payload(
+            url=url,
+            method="GET",
+            headers=headers
+        )
+
+        try:
+                
+            collection = requests.post('http://127.0.0.1:3000', json=payload, timeout=10).json()
+            
+            collection = json.loads(collection["body"])
+
+            stage = collection["state"]["stages"][-1]
+
+            start_time = int(datetime.fromisoformat(stage["startTime"][:-1]).timestamp())
+            
+            if "fixedLimit" in stage["walletLimit"]:
+            
+                wallet_limit = stage["walletLimit"]["fixedLimit"]["limit"]
+                
+            else:
+                
+                wallet_limit = None
+
+            price = stage["price"]
+            
+            return {
+                "name": collection["name"],
+                "price": price,
+                "supply": collection["size"],
+                "cmid": collection["mint"]["candyMachineId"],
+                "walletLimit": wallet_limit,
+                "date": start_time,
+            }
+
+        except:
+            
+            return None
+
     def _get_blockhash(self):
         
         res = self.client.get_recent_blockhash(Commitment('finalized'))
@@ -192,7 +258,7 @@ class MagicEdenLaunchpad():
             
             tx.sign_partial(*[self.mint_account])
 
-            serialized = tx.serialize()
+            serialized = tx.serialize(verify_signatures=False)
 
             tx_hash = self.client.send_raw_transaction(serialized, OPTS)["result"]
 

@@ -189,13 +189,13 @@ class MagicEden():
                 'accept-language': 'es-ES,es;q=0.9',
                 'origin': 'https://magiceden.io',
                 'referer': 'https://magiceden.io/',
-                'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="101", "Google Chrome";v="101"',
+                'sec-ch-ua': '".Not/A)Brand";v="99", "Google Chrome";v="103", "Chromium";v="103"',
                 'sec-ch-ua-mobile': '?0',
                 'sec-ch-ua-platform': '"macOS"',
                 'sec-fetch-dest': 'empty',
                 'sec-fetch-mode': 'cors',
                 'sec-fetch-site': 'same-site',
-                'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36',
+                'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36',
             }
 
             payload = create_tls_payload(
@@ -204,11 +204,12 @@ class MagicEden():
                 headers=headers
             )
 
-            res = requests.post("http://127.0.0.1:3000", json=payload, timeout=3).json()
+            res = requests.post("http://127.0.0.1:3000", json=payload, timeout=5).json()
 
             return json.loads(res["body"])["results"]
 
         except:
+            
 
             return None
 
@@ -221,16 +222,18 @@ class MagicEden():
                 'authority': 'api-mainnet.magiceden.io',
                 'accept': 'application/json, text/plain, */*',
                 'accept-language': 'es-ES,es;q=0.9',
+                'if-none-match': 'W/"276b-MeuoZ0jLK0q42mx9aS5qPsvRkpg"',
                 'origin': 'https://magiceden.io',
                 'referer': 'https://magiceden.io/',
-                'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="101", "Google Chrome";v="101"',
+                'sec-ch-ua': '".Not/A)Brand";v="99", "Google Chrome";v="103", "Chromium";v="103"',
                 'sec-ch-ua-mobile': '?0',
                 'sec-ch-ua-platform': '"macOS"',
                 'sec-fetch-dest': 'empty',
                 'sec-fetch-mode': 'cors',
                 'sec-fetch-site': 'same-site',
-                'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.64 Safari/537.36',
+                'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36',
             }
+
 
             payload = create_tls_payload(
                 url=f"https://api-mainnet.magiceden.io/rpc/getNFTsByOwner/{wallet}",
@@ -238,8 +241,7 @@ class MagicEden():
                 headers=headers
             )
 
-            res = requests.post("http://127.0.0.1:3000",
-                                json=payload, timeout=3)
+            res = requests.post("http://127.0.0.1:3000", json=payload, timeout=10)
 
             return json.loads(res.json()["body"])["results"]
 

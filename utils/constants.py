@@ -8,7 +8,7 @@ class SolanaEndpoints():
     
 class Bot():
     
-    VERSION = "0.19.1.0"
+    VERSION = "0.19.2.0"
     USER_OS = sys.platform
 
 class Discord():
@@ -36,4 +36,5 @@ class SolanaPrograms():
     ME_PROGRAM = "CMZYPASGWeTz7RNGHaRJfCq2XQ5pYK6nDvVQxzkH51zb"
     LMN_PROGRAM = "ArAA6CZC123yMJLUe4uisBEgvfuw2WEvex9iFmFCYiXv"
     ML_PROGRAM = "minwAEdewYNqagUwzrVBUGWuo277eeSMwEwj76agxYd"
+    BIFROST = "BFCMkgg9eFSv54HKJZFD5RMG8kNR5eMAEWnAtfRTPCjU"
     

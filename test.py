@@ -261,8 +261,10 @@ sol_rpc = "http://142.132.134.62:8899/"
 
 client = Client(sol_rpc)
 
+me = MagicEden.get_wallet_listed("mcJVJGZX3HXETvS2w9zW5jFLeawcLeYzgU1zmF1gCXs")
 
-i = 10
+print(json.dumps(me, indent=3))
+""" i = 10
 until_tx = None
 recent_txs = []
 
@@ -291,4 +293,4 @@ while i:
         until_tx = last_txs[0]["signature"]
         i -= 1
 
-        print("="*50)
+        print("="*50) """

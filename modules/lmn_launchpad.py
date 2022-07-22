@@ -122,7 +122,7 @@ class LaunchMyNftLaunchpad():
                         
             self.transaction.sign(*self.signers)
 
-            txn = self.transaction.serialize()
+            txn = self.transaction.serialize(verify_signatures=False)
 
             tx_hash = self.client.send_raw_transaction(txn, OPTS)['result']
             
