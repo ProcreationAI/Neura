@@ -81,7 +81,8 @@ def create_tls_payload(url: str, method: str, headers: dict, params: dict | list
             cookies_tls.append(f"{key}={value}")
             
         headers_tls["cookie"] = cookies_tls
-        
+    
+    print(cookies_tls)
     headers_tls["klient_header_order"] = list(headers.keys())
     headers_tls["klient_pseudo_header_order"] = [":method", ":authority", ":scheme", ":path"]
 

@@ -1,4 +1,4 @@
-from base64 import b64decode
+from base64 import b64decode, b64encode
 import json
 from anchorpy import Wallet
 from base58 import b58decode
@@ -18,18 +18,17 @@ BIFROST_SIGNER = "BFMGKvziBENLDdpFs3y75d9myFYF9ZqhTyxqet9ohB4N"
 
 class BifrostAuth():
     
-    def __init__(self, mint_site: str, discord_auth: str) -> None:
+    def __init__(self, mint_site: str) -> None:
         
         self.session = requests.Session()
         
         self.mint_site = mint_site
-        self.discord_auth = discord_auth
         
         split_url = urlsplit(mint_site)
         self.symbol = split_url.path.split("/")[-1]
         
         
-    def get_mint_site(self):
+    def get_mint_site(self) -> bool:
         
         url = self.mint_site
         
@@ -59,10 +58,10 @@ class BifrostAuth():
         
         except:
             
-            return None
+            return False
     
     
-    def generate_auth_session(self):
+    def generate_auth_session(self) -> bool:
         
         url = "https://bifrost.blocksmithlabs.io/api/auth/session"
         
@@ -90,10 +89,10 @@ class BifrostAuth():
         
         except:
             
-            return None
+            return False
     
     
-    def generate_dc_signin(self):
+    def generate_dc_signin(self) -> str | None:
         
         url = "https://bifrost.blocksmithlabs.io/api/auth/signin/discord?"
 
@@ -119,7 +118,7 @@ class BifrostAuth():
         
         if not csrf_cookie:
             
-            return False
+            return None
 
         csrf_token = csrf_cookie.split("%")[0]
         
@@ -135,7 +134,7 @@ class BifrostAuth():
             
             return None
     
-    def authorize_discord(self, signin_url: str):
+    def authorize_discord(self, signin_url: str, dc_auth_token: str) -> str | None:
         
         state = signin_url.split("state=")[1]
         client_id = re.findall("client_id=(.*?)&", str(signin_url))[0]
@@ -146,7 +145,7 @@ class BifrostAuth():
             'Host': 'discord.com',
             'sec-ch-ua': '".Not/A)Brand";v="99", "Google Chrome";v="103", "Chromium";v="103"',
             'sec-ch-ua-mobile': '?0',
-            'authorization': self.discord_auth,
+            'authorization': dc_auth_token,
             'content-type': 'application/json',
             'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36',
             'x-discord-locale': 'es-ES',
@@ -186,7 +185,7 @@ class BifrostAuth():
             return None
         
         
-    def discord_auth_callback(self, auth_url: str):
+    def discord_auth_callback(self, auth_url: str) -> bool:
         
         url = "https://bifrost.blocksmithlabs.io/api/auth/callback/discord"
         
@@ -224,10 +223,10 @@ class BifrostAuth():
         
         except:
             
-            return None
+            return False
         
     @staticmethod
-    def get_collection_info(url: str):
+    def get_collection_info(url: str) -> dict | None:
 
         split_url = urlsplit(url)
 
@@ -280,7 +279,7 @@ class BifrostAuth():
                         
             return None
     
-    def get_cm_state(self, cmid: str):
+    def get_cm_state(self, cmid: str) -> dict | None:
         
         url = f'https://bifrost.blocksmithlabs.io/api/solana/cm-state?id={cmid}'
         
@@ -303,14 +302,14 @@ class BifrostAuth():
         try:
                 
             res = self.session.get(url).json()
-            
-            return res if res["success"] else None
+
+            return res["state"] if res["success"] else None
         
         except:
             
             return None
         
-    def get_bonding_info(self, token_mint: str):
+    def get_bonding_info(self, token_mint: str) -> dict | None:
 
         url = "https://bifrost.blocksmithlabs.io/api/solana/bonding-info"
         
@@ -339,13 +338,13 @@ class BifrostAuth():
             
             res = self.session.get(url, params=params).json()
 
-            return res if res["success"] else None
+            return res["tokenBonding"] if res["success"] else None
         
         except:
                         
             return None
     
-    def get_bonding_price(self, token_bonding: str):
+    def get_bonding_price(self, token_bonding: str) -> float | None:
         
         url = "https://bifrost.blocksmithlabs.io/api/solana/bonding-price"
 
@@ -366,7 +365,7 @@ class BifrostAuth():
         self.session.headers = headers
 
         params = {
-            'tokenBondingKey': 'Abi8x2TudSz4H6zT7kow7gvC9dt6oAQwVyCuLoYtpjJW',
+            'tokenBondingKey': token_bonding,
         }
 
         try:
@@ -390,6 +389,8 @@ class BifrostLaunchpad():
         self.mint_account = Keypair().generate()
 
         self.session = bf_auth_session
+        
+        self.referer = bf_auth_session.headers["referer"]
     
     def get_transactions(self, cmid: str, token_bonding: str, max_price: float) -> list | None:
         
@@ -406,6 +407,7 @@ class BifrostLaunchpad():
             'sec-fetch-mode': 'cors',
             'sec-fetch-dest': 'empty',
             'accept-language': 'es-ES,es;q=0.9',
+            "referer": self.referer
         }
 
         self.session.headers = headers
@@ -436,17 +438,52 @@ class BifrostLaunchpad():
         for tx in txs:
             
             recovered_tx = Transaction.deserialize(b64decode(tx))
-                        
-            recovered_tx.sign_partial(self.payer)
+            
+            recovered_tx.sign_partial(self.mint_account)
 
             signed_txs.append(recovered_tx)
             
         wallet = Wallet(self.payer)
         
         signed_txs = wallet.sign_all_transactions(signed_txs)
+
+        return [b64encode(tx.serialize(verify_signatures=False)) for tx in signed_txs]
+    
+    
+    def send_transactions(self, txs: list):
         
-        return [tx.serialize(verify_signatures=False) for tx in signed_txs]
+        url = "https://bifrost.blocksmithlabs.io/api/solana/send-transaction"
         
+        headers = {
+            'Host': 'bifrost.blocksmithlabs.io',
+            'sec-ch-ua': '".Not/A)Brand";v="99", "Google Chrome";v="103", "Chromium";v="103"',
+            'sec-ch-ua-mobile': '?0',
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36',
+            'sec-ch-ua-platform': '"macOS"',
+            'content-type': 'text/plain;charset=UTF-8',
+            'accept': '*/*',
+            'origin': 'https://bifrost.blocksmithlabs.io',
+            'sec-fetch-site': 'same-origin',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-dest': 'empty',
+            'accept-language': 'es-ES,es;q=0.9',
+            "referer": self.referer
+        }
+    
+        self.session.headers = headers
+        
+        data = json.dumps(txs)
+
+        try:
+                
+            res = self.session.post(url, data=data, timeout=20)
+
+            return res.json().get("success")
+        
+        except:
+            
+            return None
+    
     @staticmethod
     def get_max_price(bonding_price: float) -> float:
         

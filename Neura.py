@@ -824,6 +824,20 @@ def wallet_is_holder(pubkey: str, hashlist: list):
 
     return False
 
+def check_dc_token(token: str):
+    
+    try:
+                
+        headers = {
+            'authorization': token
+        }
+
+        return requests.get("https://discord.com/api/v7/users/@me", headers=headers).json()
+        
+    except:
+        
+        return None
+    
 def get_blockhash():
 
     try:
