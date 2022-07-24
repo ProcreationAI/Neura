@@ -8,5 +8,5 @@ from .open_sea import OpenSea
 from .neuradb import NeuraDB
 from .coral_cube import CoralCube
 from .ml_launchpad import MonkeLabsLaunchpad
-from .sol_wallet_manager import SolWalletManager
+from .wallet_manager import SolWalletManager
 from .bifrost import BifrostAuth, BifrostLaunchpad

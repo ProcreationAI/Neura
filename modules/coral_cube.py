@@ -149,8 +149,7 @@ class CoralCube():
                 params=params
             )
 
-            res = requests.post("http://127.0.0.1:3000",
-                                json=payload, timeout=3).json()
+            res = requests.post("http://127.0.0.1:3000",json=payload, timeout=3).json()
             
             return json.loads(res["body"])["items"]
 
@@ -232,7 +231,6 @@ class CoralCube():
             seeds=[
                 "auction_house".encode("utf-8"),
                 "signer".encode("utf-8"),
-
             ],
             program_id=PublicKey(AUCTION_PROGRAM)
         )

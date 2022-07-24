@@ -24,9 +24,6 @@ class BifrostAuth():
         
         self.mint_site = mint_site
         
-        split_url = urlsplit(mint_site)
-        self.symbol = split_url.path.split("/")[-1]
-        
         
     def get_mint_site(self) -> bool:
         
@@ -224,7 +221,27 @@ class BifrostAuth():
         except:
             
             return False
+
+
+class BifrostLaunchpad():
+    
+    
+    def __init__(self, privkey: str, bf_auth: BifrostAuth) -> None:
         
+        self.payer = Keypair.from_secret_key(b58decode(privkey))
+        
+        self.mint_account = Keypair().generate()
+
+        self.session = bf_auth.session
+        
+        self.mint_site = bf_auth.mint_site
+
+
+    @staticmethod
+    def get_max_price(bonding_price: float) -> float:
+        
+        return bonding_price * (1 + (SLIPPAGE/100))
+    
     @staticmethod
     def get_collection_info(url: str) -> dict | None:
 
@@ -238,7 +255,7 @@ class BifrostAuth():
             'authority': 'bifrost.blocksmithlabs.io',
             'accept': '*/*',
             'accept-language': 'es-ES,es;q=0.9',
-            'referer': f'https://bifrost.blocksmithlabs.io/mint/{symbol}',
+            'referer': url,
             'sec-ch-ua': '".Not/A)Brand";v="99", "Google Chrome";v="103", "Chromium";v="103"',
             'sec-ch-ua-mobile': '?0',
             'sec-ch-ua-platform': '"macOS"',
@@ -255,9 +272,9 @@ class BifrostAuth():
         )
         
         try:
-                
-            collection = requests.post("http://127.0.0.1:3000", json=payload).json()
             
+            collection = requests.post("http://127.0.0.1:3000", json=payload).json()
+
             collection = json.loads(collection["body"])["data"]
             
             stage = collection["mintPhases"][-1]
@@ -377,21 +394,7 @@ class BifrostAuth():
         except:
             
             return None
-    
 
-class BifrostLaunchpad():
-    
-    
-    def __init__(self, privkey: str, bf_auth_session: requests.Session) -> None:
-        
-        self.payer = Keypair.from_secret_key(b58decode(privkey))
-        
-        self.mint_account = Keypair().generate()
-
-        self.session = bf_auth_session
-        
-        self.referer = bf_auth_session.headers["referer"]
-    
     def get_transactions(self, cmid: str, token_bonding: str, max_price: float) -> list | None:
         
         url = "https://bifrost.blocksmithlabs.io/api/solana/mint-info"
@@ -407,7 +410,7 @@ class BifrostLaunchpad():
             'sec-fetch-mode': 'cors',
             'sec-fetch-dest': 'empty',
             'accept-language': 'es-ES,es;q=0.9',
-            "referer": self.referer
+            "referer": self.mint_site
         }
 
         self.session.headers = headers
@@ -467,7 +470,7 @@ class BifrostLaunchpad():
             'sec-fetch-mode': 'cors',
             'sec-fetch-dest': 'empty',
             'accept-language': 'es-ES,es;q=0.9',
-            "referer": self.referer
+            "referer": self.mint_site
         }
     
         self.session.headers = headers
@@ -483,8 +486,3 @@ class BifrostLaunchpad():
         except:
             
             return None
-    
-    @staticmethod
-    def get_max_price(bonding_price: float) -> float:
-        
-        return bonding_price * (1 + (SLIPPAGE/100))

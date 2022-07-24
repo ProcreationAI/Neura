@@ -21,7 +21,6 @@ from dhooks import Embed, Webhook
 
 from solana.rpc.api import Client
 from solana.rpc import types
-from solana.keypair import Keypair
 from solana.publickey import PublicKey
 from solana.blockhash import Blockhash
 from solana.rpc.commitment import Commitment
@@ -35,13 +34,15 @@ from modules import (
     CoralCube,
     NeuraDB,
     MonkeLabsLaunchpad,
-    SolWalletManager
+    SolWalletManager,
+    BifrostAuth,
+    BifrostLaunchpad
 )
 
 from utils.constants import Bot, Discord, SolanaPrograms, SolanaEndpoints, Keys
 from utils.bot import logger, get_config, get_hwid, set_app_title
 from utils.bypass import create_tls_payload, start_tls
-from utils.solana import sol_to_lamports, lamports_to_sol, get_uri_metadata, get_nft_metadata, get_program_account_idl
+from utils.solana import sol_to_lamports, lamports_to_sol, get_uri_metadata, get_nft_metadata, get_program_account_idl, get_pub_from_priv, get_wallet_balance, get_blockhash, get_last_account_txs
 
 
 def get_sol_wallets():
@@ -74,13 +75,13 @@ def get_sol_wallets():
 
                             if mode in [1, 2, 7, 9] and tasks:
                                     
-                                if tasks > max_tasks:
+                                """ if tasks > max_tasks:
 
                                     tasks = max_tasks
 
                                 elif tasks < min_tasks:
                                     
-                                    tasks = min_tasks
+                                    tasks = min_tasks """
                                 
                             wallets.append(
 
@@ -117,7 +118,7 @@ def clear(newline: bool = True):
 
         print()
 
-def mint(wallet: dict):
+def mint(wallet: dict, recent_blockhash: Blockhash):
 
     name = wallet["name"]
     tasks = wallet["tasks"]
@@ -126,38 +127,6 @@ def mint(wallet: dict):
     trs = []
 
     show_drop_time = datetime.fromtimestamp(DROP_TIME).strftime("%H:%M:%S")
-    
-    console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Initialazing mint[/]\n".format(name, f"0/{tasks}", show_drop_time)), end="")
-
-    if mode != 9 or user_time:
-
-        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for drop time[/]\n".format(name, f"0/{tasks}", show_drop_time)), end="")
-
-        wait_for_drop(exit_before=3)
-    
-    elif await_mints:
-        
-        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for mints[/]\n".format(name, f"0/{tasks}", show_drop_time)), end="")
-        
-        wait_for_mints()
-        
-    while True:
-
-        recent_blockhash = get_blockhash()
-
-        if recent_blockhash:
-            
-            console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Initialazing transactions[/]\n".format(name, f"0/{tasks}", show_drop_time)), end="")
-            
-            break
-        
-        else:
-
-            console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [red]Unable to initialize txs (node)[/]\n".format(name, f"0/{tasks}", show_drop_time)), end="")
-            
-    if mode != 9 or user_time:
-        
-        wait_for_drop()
             
     for i in range(tasks):
         
@@ -219,7 +188,9 @@ def send_cmv2_tx(privkey: str, rpc: str, blockhash: Blockhash, status: str):
 
         candy.transaction.recent_blockhash = blockhash
 
-    except:
+    except Exception as e:
+        
+        print(e)
         
         console.print(logger(f"{status} [red]Error while creating tx (node)[/]\n"), end="")
 
@@ -441,6 +412,7 @@ def send_sniper_webhook(mint: str, tx: str, price: float, sniping_time: float, w
         except:
             
             pass
+ 
             
 def check_cmid(cmid: str):
     
@@ -737,23 +709,6 @@ def show_banner():
 
 
 
-
-
-def get_wallet_balance(pubkey: str):
-
-    try:
-
-        client = Client(sol_rpc)
-
-        balance = client.get_balance(pubkey)
-
-        return balance["result"]["value"]
-
-    except:
-
-        return 0
-
-
 def get_wallet_nfts(wallet: str):
 
     try:
@@ -797,18 +752,6 @@ def get_collection_pda_account(cmid: str):
         program_id=PublicKey(SolanaPrograms.CMV2_PROGRAM)
     )[0])
 
-    
-def get_pub_from_priv(privkey: str):
-
-    try:
-        wallet = Keypair.from_secret_key(base58.b58decode(privkey))
-
-        return str(wallet.public_key)
-
-    except:
-
-        return None
-
 
 def wallet_is_holder(pubkey: str, hashlist: list):
 
@@ -837,22 +780,7 @@ def check_dc_token(token: str):
     except:
         
         return None
-    
-def get_blockhash():
 
-    try:
-            
-        client = Client(sol_rpc)
-        
-        res = client.get_recent_blockhash(Commitment('finalized'))
-
-        blockhash = Blockhash(res['result']['value']['blockhash'])
-
-        return blockhash
-
-    except:
-        
-        return None
     
 
 def get_local_time(_time: int):
@@ -892,18 +820,11 @@ def validate_me_purchase_results(nft_data: dict, filters: dict, min_rank: int = 
         
         if attributes:
             
-            possible_attributes = []
+            nft_attributes = [{"trait_type": attribute["trait_type"].lower().strip(), "value": attribute["value"].lower().strip()} for attribute in attributes]
 
-            for attribute in attributes:
-                
-                possible_attributes.append(
-                    {
-                        "trait_type": attribute["trait_type"].lower().strip(),
-                        "value": attribute["value"].lower().strip()
-                    }
-                )            
+            wanted_attributes = [{"trait_type": attribute["trait_type"].lower().strip(), "value": attribute["value"].lower().strip()} for attribute in filters]        
             
-            if not all(attr in possible_attributes for attr in filters):
+            if not all(attr in nft_attributes for attr in wanted_attributes):
                     
                 return False
         else:
@@ -936,18 +857,11 @@ def validate_cc_purchase_results(nft_data: dict, filters: dict, min_rank: int, m
         
         if attributes:
             
-            possible_attributes = []
+            nft_attributes = [{"trait_type": attribute["trait_type"].lower().strip(), "value": attribute["value"].lower().strip()} for attribute in attributes]
 
-            for attribute in attributes:
-                
-                possible_attributes.append(
-                    {
-                        "trait_type": attribute["trait_type"].lower(),
-                        "value": attribute["value"].lower()
-                    }
-                )            
+            wanted_attributes = [{"trait_type": attribute["trait_type"].lower().strip(), "value": attribute["value"].lower().strip()} for attribute in filters]        
             
-            if not all(attr in possible_attributes for attr in filters):
+            if not all(attr in nft_attributes for attr in wanted_attributes):
                     
                 return False
         else:
@@ -994,15 +908,7 @@ def check_marketplace_url(url):
 
     if "magiceden.io" in split_url.netloc:
 
-        if "/marketplace/" in split_url.path and is_URL(url):
-
-            return "magiceden"
-        
-    elif "opensea.io" in split_url.netloc:
-
-        if "/collection/" in split_url.path and is_URL(url):
-
-            return "opensea"
+        return "/marketplace/" in split_url.path and is_URL(url)
 
     return None
 
@@ -1099,41 +1005,6 @@ def get_cc_collection_metadata(symbol: str):
                 }
         
     return None
-    
-    
-def get_account_last_txs(account: str, limit: int, commitment: str, until: str = None):
-
-    try:
-        
-        client = Client(sol_rpc)
-        
-        txs = client.get_signatures_for_address(account=account, limit=limit, commitment=Commitment(commitment), until=until)["result"]
-
-        return txs
-
-    except:
-                
-        return None
-
-
-def create_csv_file(file_name: str, columns: list):
-        
-    clean_columns = [column for column in columns if column.isascii()]
-    
-    try:
-            
-        with open(f'{file_name}.csv', 'w', newline="") as f:
-            
-            writer = csv.writer(f)
-            
-            writer.writerow(clean_columns)
-            writer.writerow([None]*len(clean_columns))
-        
-        return True
-    
-    except:
-        
-        return None
 
 
 def get_sweeper_data(file_name: str):
@@ -1278,12 +1149,7 @@ def monitor_me_sniper_file(file_name: str):
                             
                             trait, value = attribute.split("=")
 
-                            filtered_attributes.append(
-                                {
-                                    "trait_type": trait.lower().strip(),
-                                    "value": value.lower().strip()
-                                }
-                            )
+                            filtered_attributes.append({"trait_type": trait, "value": value})
                         
                     sniper_data_raw["Attributes"] = filtered_attributes if filtered_attributes else None
                                
@@ -1376,12 +1242,7 @@ def monitor_cc_sniper_file(file_name: str):
                             
                             trait, value = attribute.split("=")
 
-                            filtered_attributes.append(
-                                {
-                                    "trait_type": trait.lower().strip(),
-                                    "value": value.lower().strip()
-                                }
-                            )
+                            filtered_attributes.append({"trait_type": trait, "value": value})
                         
                     sniper_data_raw["Attributes"] = filtered_attributes if filtered_attributes else None
                                
@@ -1610,18 +1471,18 @@ def create_table_wallets(wallets: list):
         
         for wallet in wallets:
 
-            balance = get_wallet_balance(wallet["address"])
+            balance = get_wallet_balance(wallet["address"], sol_rpc)
 
             table.add_row(wallet["name"], wallet["address"], str(wallet["tasks"]), str(round(lamports_to_sol(balance), 2)))
 
         return table
 
 
-def show_cm_status(cm: str, program: str):
+def get_cm_mints_status(cm: str | dict, program: str):
 
     available = redeemed = None
     
-    if mode in [1,2,7]:
+    if program in [SolanaPrograms.CMV2_PROGRAM, SolanaPrograms.ME_PROGRAM, SolanaPrograms.LMN_PROGRAM]:
             
         metadata = asyncio.run(get_program_account_idl(
             "CandyMachine",
@@ -1646,21 +1507,18 @@ def show_cm_status(cm: str, program: str):
                 
                 available = metadata.data.items_available
                 redeemed = metadata.items_redeemed
-                
-    elif mode == 9:        
         
-        if program == SolanaPrograms.ML_PROGRAM:
-            
-            available = int(cm["REACT_APP_INDEX_CAP"])
-            redeemed = get_ml_items_redeemed(index_key=cm["REACT_APP_INDEX_KEY"])
+    elif program == SolanaPrograms.ML_PROGRAM:
+        
+        available = int(cm["REACT_APP_INDEX_CAP"])
+        redeemed = get_ml_items_redeemed(index_key=cm["REACT_APP_INDEX_KEY"])
         
     if available and redeemed:
             
         minted = int((redeemed/available) * 100)
 
-        console.print(
-            f"[AVAILABLE ~ [green]{available}[/]] [REDEEMED ~ [yellow]{redeemed}[/]] [MINTED ~ [cyan]{minted}%[/]]\n")
-
+        return available, redeemed, minted
+    
 
 def get_range_to_operate(operation: str, wallet_to_operate: int = None):
 
@@ -2118,7 +1976,8 @@ while True:
     console.print("[cyan] [7][/] LaunchMyNFT mint")
     console.print("[cyan] [8][/] CoralCube sniper")
     console.print("[cyan] [9][/] MonkeLabs mint")
-    console.print("[cyan] [10][/] Node health checker\n")
+    console.print("[cyan] [10][/] Bifrost mint")
+    console.print("[cyan] [11][/] Node health checker\n")
     
     mode = get_module()
 
@@ -2219,32 +2078,14 @@ while True:
 
                 break
 
-            wallet = [wallet for wallet in wallets if selected_wallet ==
-                      wallet["name"].lower()][0]
+            wallet = [wallet for wallet in wallets if selected_wallet == wallet["name"].lower()][0]
 
             clear()
+                        
+            console.print(create_table_wallets([wallet]))
 
-
-            sniper_default_filters = [
-                "Collection",
-                "MinPrice",
-                "MaxPrice",
-                "UnderFloor(%)",
-                "MinRank",
-                "MaxRank",
-                "Attributes",
-                "AutoListByPrice(%)",
-                "AutoListByFloor(%)"
-            ] 
+            print()
             
-            filters = sniper_default_filters
-            
-            clear()
-            
-            create_csv_file(file_name="me-sniper", columns=filters)
-            
-            console.print("[green] Sniper file created successfuly ![/]\n")                 
-
             start_sniper = Prompt.ask("[purple] >>[/] Are you sure you want to continue? This will start the sniper instantly", choices=["y", "n"])
             
             print()
@@ -2325,7 +2166,8 @@ while True:
                                                         
                             status = f"[SNIPER] [cyan][COLLECTIONS ~ {len(loaded_collections)}][/]"
                             
-                            last_txs = get_account_last_txs(
+                            last_txs = get_last_account_txs(
+                                rpc=sol_rpc,
                                 account="1BWutmTvYPwDtmw9abTkS4Ssr8no61spGAvW1X6NDix", 
                                 limit=10, 
                                 commitment="confirmed",
@@ -2571,7 +2413,7 @@ while True:
                             
                             break
                         
-                        balance = get_wallet_balance(wallet["address"])
+                        balance = get_wallet_balance(wallet["address"], sol_rpc)
 
                         nfts_data = []
 
@@ -2909,8 +2751,7 @@ while True:
 
                 break
 
-            wallet = [wallet for wallet in wallets if selected_wallet ==
-                      wallet["name"].lower()][0]
+            wallet = [wallet for wallet in wallets if selected_wallet == wallet["name"].lower()][0]
 
             clear()
 
@@ -2943,29 +2784,13 @@ while True:
 
                 if valid_collection:
                     
-                    sweeper_default_filters = [
-                        "Amount",
-                        "MaxFunds",
-                        "UnderPrice",
-                        "MinRank",
-                        "MaxRank",
-                    ] 
-                    
-                    filters = sweeper_default_filters + collection_attributes
-                    
                     clear()
                     
-                    if create_csv_file(file_name="me-sweeper", columns=filters):
+                    console.print(create_table_wallets([wallet]))
                     
-                        console.print("[green] Sweeper file created successfuly ![/]\n")                 
-
-                        start_sweeper = Prompt.ask("[purple] >>[/] Are you sure you want to continue? This will start the sweeper instantly", choices=["y", "n"])
-                        
-                    else:
-                        
-                        console.print("[red] Unexpected error while creating sweeper file[/]\n")    
-                        
-                        start_sweeper = "n"
+                    print()
+                    
+                    start_sweeper = Prompt.ask("[purple] >>[/] Are you sure you want to continue? This will start the sweeper instantly", choices=["y", "n"])
                         
                     print()
                     
@@ -2973,6 +2798,8 @@ while True:
                         
                         privkey = wallet["privkey"]
                         
+                        console.print(logger(f"[SWEEPER] [cyan][{symbol.upper()}][/] [yellow]Loading file data and initialazing...[/]"))
+
                         while True:
                             
                             sweeper_data = get_sweeper_data(file_name="me-sweeper")
@@ -2980,12 +2807,8 @@ while True:
                             if sweeper_data:
                                 
                                 break
-                            
-                            else:
-                                
-                                console.print("[red] Invalid sniper file data or format[/]")
-                                        
-                                time.sleep(0.5)
+
+                            time.sleep(0.5)
                         
                         amount = sweeper_data["Amount"]
                         max_funds = sweeper_data["MaxFunds"]
@@ -3004,8 +2827,8 @@ while True:
                         elif under_price:
                             
                             amount = max_funds = None
-                            
-                        attributes = {key: value for key, value in sweeper_data.items() if key not in sweeper_default_filters and value and key in collection_attributes}
+                        
+                        attributes = [{"trait_type": key, "value": value} for key, value in sweeper_data.items() if value and key in collection_attributes]
                         
                         if amount is not None:
                             
@@ -3163,8 +2986,7 @@ while True:
 
                 break
 
-            wallet = [wallet for wallet in wallets if selected_wallet ==
-                      wallet["name"].lower()][0]
+            wallet = [wallet for wallet in wallets if selected_wallet == wallet["name"].lower()][0]
 
             clear()
 
@@ -3189,153 +3011,138 @@ while True:
 
                 if valid_token:
                     
-                    sniper_default_filters = [
-                        "Cancel",
-                        "MinPrice",
-                        "MaxPrice"
-                    ] 
-                    
-                    filters = sniper_default_filters
-                    
                     clear()
+                
+                    console.print(create_table_wallets([wallet]))
                     
-                    if create_csv_file(file_name="fff-sniper", columns=filters):
+                    print()
                     
-                        console.print("[green] Sniper file created successfuly ![/]\n")                 
+                    start_sniper = Prompt.ask("[purple] >>[/] Are you sure you want to continue? This will start the sniper instantly", choices=["y", "n"])
+                    
+                    print()
 
-                        start_sniper = Prompt.ask("[purple] >>[/] Are you sure you want to continue? This will start the sniper instantly", choices=["y", "n"])
+                    if start_sniper == "y":
                         
-                        print()
+                        sniper_data = {}
+                        kill_sniper = False
+                        current_txs = []
+                        until_tx = None
+                        
+                        privkey = wallet["privkey"]
+                        tasks = wallet["tasks"]
+                        
+                        monitorSniperFileT = Thread(
+                            target=monitor_fff_sniper_file,
+                            args=["fff-sniper"],
+                            daemon=True
+                        )
+                        
+                        monitorSniperFileT.start()
+                        
+                        famous_fox = FamousFox(
+                            rpc=sol_rpc,
+                            privkey=privkey,
+                        )
+                        
+                        for _ in range(tasks):
 
-                        if start_sniper == "y":
-                            
-                            sniper_data = {}
-                            kill_sniper = False
-                            current_txs = []
-                            until_tx = None
-                            
-                            privkey = wallet["privkey"]
-                            tasks = wallet["tasks"]
-                            
-                            monitorSniperFileT = Thread(
-                                target=monitor_fff_sniper_file,
-                                args=["fff-sniper"],
-                                daemon=True
-                            )
-                            
-                            monitorSniperFileT.start()
-                            
-                            famous_fox = FamousFox(
-                                rpc=sol_rpc,
-                                privkey=privkey,
-                            )
-                            
-                            for _ in range(tasks):
-
-                                while True:
+                            while True:
+                                
+                                if sniper_data:
                                     
-                                    if sniper_data:
+                                    if sniper_data["Cancel"]:
                                         
-                                        if sniper_data["Cancel"]:
-                                            
-                                            kill_sniper = True
-                                            
-                                            break
+                                        kill_sniper = True
                                         
-                                        min_sol = sniper_data["MinPrice"]
-                                        max_sol = sniper_data["MaxPrice"]
+                                        break
+                                    
+                                    min_sol = sniper_data["MinPrice"]
+                                    max_sol = sniper_data["MaxPrice"]
 
-                                        status = f"[SNIPER] [cyan][{token_mint}] [{min_sol}-{max_sol} SOL][/]"
+                                    status = f"[SNIPER] [cyan][{token_mint}] [{min_sol}-{max_sol} SOL][/]"
 
-                                        last_txs = get_account_last_txs(
-                                            account="8BYmYs3zsBhftNELJdiKsCN2WyCBbrTwXd6WG4AFPr6n", 
-                                            limit=10, 
-                                            commitment="confirmed",
-                                            until=until_tx
-                                        )
-                                                                                
-                                        if last_txs:
+                                    last_txs = get_last_account_txs(
+                                        rpc=sol_rpc,
+                                        account="8BYmYs3zsBhftNELJdiKsCN2WyCBbrTwXd6WG4AFPr6n", 
+                                        limit=10, 
+                                        commitment="confirmed",
+                                        until=until_tx
+                                    )
+                                                                            
+                                    if last_txs:
+                                        
+                                        for tx in last_txs:
                                             
-                                            for tx in last_txs:
-                                                
-                                                signature = tx["signature"]
-                                                
-                                                if signature not in current_txs:
+                                            signature = tx["signature"]
+                                            
+                                            if signature not in current_txs:
 
-                                                    current_txs.append(signature)
-                                                    
-                                                    console.print(logger(f"{status} [yellow]Fetching new data...[/]"))
+                                                current_txs.append(signature)
+                                                
+                                                console.print(logger(f"{status} [yellow]Fetching new data...[/]"))
 
-                                                    listing_info = famous_fox.check_tx_is_listing(tx=signature)
+                                                listing_info = famous_fox.check_tx_is_listing(tx=signature)
+                                                
+                                                if listing_info:
                                                     
-                                                    if listing_info:
+                                                    price_in_sol = lamports_to_sol(listing_info["price"])
+                                                    price_in_lamports = listing_info["price"]
+                                                    mint_address = listing_info["mint"]
+                                                    seller = listing_info["seller"]
                                                         
-                                                        price_in_sol = lamports_to_sol(listing_info["price"])
-                                                        price_in_lamports = listing_info["price"]
-                                                        mint_address = listing_info["mint"]
-                                                        seller = listing_info["seller"]
-                                                            
-                                                        if min_sol <= price_in_sol <= max_sol and mint_address == token_mint:
+                                                    if min_sol <= price_in_sol <= max_sol and mint_address == token_mint:
+
+                                                        console.print(logger(
+                                                            f"{status} [yellow]Sniped token[/] [purple]>[/] [cyan]{price_in_sol} SOL[/]"))
+                                                        
+                                                        tx_hash = famous_fox.buy_token(
+                                                            mint=token_mint,
+                                                            price=price_in_lamports,
+                                                            seller=seller
+                                                        )
+                                                        
+                                                        if tx_hash:
 
                                                             console.print(logger(
-                                                                f"{status} [yellow]Sniped token[/] [purple]>[/] [cyan]{price_in_sol} SOL[/]"))
+                                                                f"{status} [green]Purchase successful[/] [purple]>[/] [cyan]{price_in_sol} SOL[/]"))
                                                             
-                                                            tx_hash = famous_fox.buy_token(
-                                                                mint=token_mint,
-                                                                price=price_in_lamports,
-                                                                seller=seller
-                                                            )
-                                                            
-                                                            if tx_hash:
+                                                            break
 
-                                                                console.print(logger(
-                                                                    f"{status} [green]Purchase successful[/] [purple]>[/] [cyan]{price_in_sol} SOL[/]"))
-                                                                
-                                                                break
+                                                        else:
 
-                                                            else:
-
-                                                                console.print(logger(
-                                                                    f"{status} [red]Purchase failed[/]"))
-                                            
-                                            if len(current_txs) >= 500:
-            
-                                                current_txs = current_txs[-30:]
-
-                                            until_tx = last_txs[0]["signature"]
-                                            
-                                        elif last_txs is None:
-                                                
-                                            console.print(logger(f"{status} [red]Unable to fetch new data (node)[/]"))
-                                          
-                                    else:
+                                                            console.print(logger(
+                                                                f"{status} [red]Purchase failed[/]"))
                                         
-                                        console.print("[red] Invalid sniper file data or format[/]")
+                                        if len(current_txs) >= 500:
+        
+                                            current_txs = current_txs[-30:]
+
+                                        until_tx = last_txs[0]["signature"]
                                         
-                                        time.sleep(0.5)
-                            
-                                if kill_sniper:
+                                    elif last_txs is None:
+                                            
+                                        console.print(logger(f"{status} [red]Unable to fetch new data (node)[/]"))
+                                        
+                                else:
                                     
-                                    break
-                            
-                            kill_sniper = True
+                                    console.print("[red] Invalid sniper file data or format[/]")
                                     
-                            console.input(
-                                "\n\n [purple]>>[/] Press ENTER to exit ", password=True)
-
-                            menu = True
-
-                            break
-
-                        clear()
-                    
-                    else:
+                                    time.sleep(0.5)
                         
-                        clear()
+                            if kill_sniper:
+                                
+                                break
                         
-                        console.print("[yellow] ERROR![/][red] Unexpected error while creating sniper file[/]\n")    
-                        
-                        start_sniper = "n"
+                        kill_sniper = True
+                                
+                        console.input(
+                            "\n\n [purple]>>[/] Press ENTER to exit ", password=True)
+
+                        menu = True
+
+                        break
+
+                    clear()
                         
                 else:
 
@@ -3369,31 +3176,11 @@ while True:
 
                 break
 
-            wallet = [wallet for wallet in wallets if selected_wallet ==
-                      wallet["name"].lower()][0]
+            wallet = [wallet for wallet in wallets if selected_wallet == wallet["name"].lower()][0]
 
             clear()
-
-
-            sniper_default_filters = [
-                "Collection",
-                "MinPrice",
-                "MaxPrice",
-                "UnderFloor(%)",
-                "MinRank",
-                "MaxRank",
-                "Attributes",
-                "AutoListByPrice(%)",
-                "AutoListByFloor(%)"
-            ] 
             
-            filters = sniper_default_filters
-            
-            clear()
-            
-            create_csv_file(file_name="cc-sniper", columns=filters)
-            
-            console.print("[green] Sniper file created successfuly ![/]\n")                 
+            console.print(create_table_wallets[wallet])       
 
             start_sniper = Prompt.ask("[purple] >>[/] Are you sure you want to continue? This will start the sniper instantly", choices=["y", "n"])
             
@@ -3475,7 +3262,8 @@ while True:
                                                         
                             status = f"[SNIPER] [cyan][COLLECTIONS ~ {len(loaded_collections)}][/]"
                             
-                            last_txs = get_account_last_txs(
+                            last_txs = get_last_account_txs(
+                                rpc=sol_rpc,
                                 account="hausS13jsjafwWwGqZTUQRmWyvyxn9EQpqMwV1PBBmk", 
                                 limit=10, 
                                 commitment="confirmed",
@@ -3704,6 +3492,44 @@ while True:
         
         if mode == 10:
             
+            while True:
+                
+                console.print(create_table_wallets(wallets))
+                print()
+
+                collection_url = str(console.input("[purple] >>[/] Bifrost launchpad collection URL: ")).lower()
+                clear()
+
+                if collection_url == "e":
+                    menu = True
+                    break
+
+                with console.status("[yellow]Searching for collection[/]", spinner="bouncingBar", speed=1.5):
+
+                    collection = BifrostLaunchpad.get_collection_info(url=collection_url)
+
+                if collection:
+
+                    CM = collection["cmid"]
+                    PROGRAM = SolanaPrograms.BF_PROGRAM
+                    DROP_TIME = collection["date"]
+                    
+                    console.print(create_table_launchpad(collection))
+                    print()
+
+                    proceed = Prompt.ask("[purple] >>[/] Start Discord login?", choices=["y", "n"])
+                    clear()
+
+                    if proceed == "y":
+
+                        break
+
+                else:
+                    
+                    console.print("[yellow] ERROR![/] [red]Collection not found\n [/]")
+        
+        if mode == 11:
+            
             if not valid_sol_rpc:
 
                 console.input("[yellow] ERROR![/] [red]Invalid or unreachable RPC [/]", password=True)
@@ -3818,21 +3644,60 @@ while True:
                         if first_commit:
                             
                             DROP_TIME = int(time.time())
+
+                        show_drop_time = datetime.fromtimestamp(DROP_TIME).strftime("%H:%M:%S")
+                        
+                        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Initialazing mint[/]\n".format("ALL", "INIT", show_drop_time)), end="")
+
+                        if mode != 9 or user_time:
+
+                            console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for drop time[/]\n".format("ALL", "INIT", show_drop_time)), end="")
+
+                            wait_for_drop(exit_before=3)
+                        
+                        elif await_mints:
                             
+                            console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for mints[/]\n".format("ALL", "INIT", show_drop_time)), end="")
+                            
+                            wait_for_mints()
+                            
+                        while True:
+
+                            recent_blockhash = get_blockhash(sol_rpc)
+
+                            if recent_blockhash:
+                                
+                                console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Initialazing transactions[/]\n".format("ALL", "INIT", show_drop_time)), end="")
+                                
+                                break
+                            
+                            else:
+
+                                console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [red]Unable to initialize txs (node)[/]\n".format("ALL", "INIT", show_drop_time)), end="")
+                                
+                        if mode != 9 or user_time:
+                            
+                            wait_for_drop()
+
                         for wallet in wallets:
 
-                            if wallet["tasks"]:
-
-                                mintT = Thread(target=mint, args=[wallet])
-                                mintT.start()
-                                trs.append(mintT)
+                            mintT = Thread(target=mint, args=[wallet, recent_blockhash])
+                            mintT.start()
+                            trs.append(mintT)
 
                         for tr in trs:
                             tr.join()
 
                         print()
-                        show_cm_status(cm=CM, program=PROGRAM)
                         
+                        mints_status = get_cm_mints_status(CM, PROGRAM)
+                        
+                        if mints_status:
+                                
+                            available, redeemed, minted = mints_status
+                            
+                            console.print(f"[AVAILABLE ~ [green]{available}[/]] [REDEEMED ~ [yellow]{redeemed}[/]] [MINTED ~ [cyan]{minted}%[/]]\n")
+                            
                         first_commit = True
 
                         print("\n")
@@ -3846,3 +3711,10 @@ while True:
                             menu = True
 
                             break
+
+            elif mode in [10]:
+                
+                pass
+                #user_dc_data = check_dc_token(token=dc_auth_token)
+
+

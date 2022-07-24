@@ -1,4 +1,6 @@
 import base58
+from solana.blockhash import Blockhash
+from solana.rpc.commitment import Commitment
 import base64
 import requests
 from solana.publickey import PublicKey
@@ -10,6 +12,61 @@ from solana.keypair import Keypair
 
 from lib.idl import AccountClient
 
+
+def get_last_account_txs(rpc: str, account: str, limit: int, commitment: str, until: str = None):
+
+    try:
+        
+        client = Client(rpc)
+        
+        txs = client.get_signatures_for_address(account=account, limit=limit, commitment=Commitment(commitment), until=until)["result"]
+
+        return txs
+
+    except:
+                
+        return None
+    
+def get_blockhash(rpc: str) -> Blockhash:
+
+    try:
+            
+        client = Client(rpc)
+        
+        res = client.get_recent_blockhash(Commitment('finalized'))
+
+        return Blockhash(res['result']['value']['blockhash'])
+
+    except:
+        
+        return None
+    
+
+def get_wallet_balance(pubkey: str, rpc: str):
+
+    try:
+
+        client = Client(rpc)
+
+        balance = client.get_balance(pubkey)
+
+        return balance["result"]["value"]
+
+    except:
+
+        return 0
+    
+def get_pub_from_priv(privkey: str):
+
+    try:
+        wallet = Keypair.from_secret_key(base58.b58decode(privkey))
+
+        return str(wallet.public_key)
+
+    except:
+
+        return None
+    
 def _get_metadata_account(mint_key):
 
     metadata_program_id = PublicKey('metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s')
@@ -148,10 +205,8 @@ async def get_program_account_idl(name: str, account: str, prog: str, rpc: str):
 
         return candyMachine
 
-    except Exception as e:
-        
-        print(e)
-        
+    except:
+                
         if program:
             await program.close()
         if client:
