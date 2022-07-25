@@ -434,7 +434,7 @@ class BifrostLaunchpad():
             return None
     
     
-    def prepare_transactions(self, txs: list) -> list:
+    def sign_transactions(self, txs: list) -> list:
         
         signed_txs = []
         
@@ -479,7 +479,7 @@ class BifrostLaunchpad():
 
         try:
                 
-            res = self.session.post(url, data=data, timeout=20)
+            res = self.session.post(url, data=data, timeout=30)
 
             return res.json().get("success")
         

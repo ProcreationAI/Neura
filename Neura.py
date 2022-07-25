@@ -129,7 +129,7 @@ def clear(newline: bool = True):
 
         print()
 
-def mint(wallet: dict, recent_blockhash: Blockhash):
+def mint(wallet: dict, recent_blockhash: Blockhash = None, max_price: float = None):
 
     name = wallet["name"]
     tasks = wallet["tasks"]
@@ -172,6 +172,14 @@ def mint(wallet: dict, recent_blockhash: Blockhash):
             createtxT = Thread(
                 target=send_ml_tx,
                 args=[privkey, sol_rpc, recent_blockhash, status],
+                daemon=True
+            )
+        
+        if mode == 10:
+            
+            createtxT = Thread(
+                target=send_bf_tx,
+                args=[privkey, sol_rpc, max_price, status],
                 daemon=True
             )
             
@@ -383,6 +391,43 @@ def send_me_tx(privkey: str, rpc: str, blockhash: Blockhash, status: str):
 
         console.print(logger(f"{status} [red]Error while signing tx[/]\n"), end="")
 
+
+def send_bf_tx(privkey: str, rpc: str, max_price: float, status: str):
+
+    bf_launchpad = BifrostLaunchpad(
+        bf_auth=bf_auth_session,
+        privkey=privkey
+    )
+    
+    raw_txs = bf_launchpad.get_transactions(
+        cmid=CM,
+        token_bonding=token_bonding,
+        max_price=max_price
+    )
+    
+    if raw_txs:
+        
+        signed_txs = bf_launchpad.sign_transactions(raw_txs)
+        
+        if signed_txs:
+            
+            tx_hash = bf_launchpad.send_transactions(signed_txs)
+            
+            if tx_hash:
+                
+                console.print(logger(f"{status} [green]Mint successful[/]\n"), end="")
+
+            else:
+                
+                console.print(logger(f"{status} [red]Unable to confirm tx[/]\n"), end="")
+        else:
+            
+            console.print(logger(f"{status} [red]Error while signing tx[/]\n"), end="")    
+    
+    else:
+        
+        console.print(logger(f"{status} [red]Error while creating tx[/]\n"), end="")
+        
 
 def send_sniper_webhook(mint: str, tx: str, price: float, sniping_time: float, webhook: str):
     
@@ -3602,14 +3647,14 @@ while True:
 
                     collection = BifrostLaunchpad.get_collection_info(url=collection_url)
 
-                if not collection:
+                if collection:
 
-                    """ CM = collection["cmid"]
+                    CM = collection["cmid"]
                     PROGRAM = SolanaPrograms.BF_PROGRAM
                     DROP_TIME = collection["date"]
                     
                     console.print(create_table_launchpad(collection))
-                    print() """
+                    print()
 
                     proceed = Prompt.ask("[purple] >>[/] Start Discord auth login?", choices=["y", "n"])
                     clear()
@@ -3714,9 +3759,7 @@ while True:
                     console.print("[yellow] ERROR![/] [red]Invalid Candy Machine ID or mint not available[/]\n")
 
                 if start:
-                    
-                    first_commit = False
-                    
+                                        
                     while True:
 
                         clear()
@@ -3756,10 +3799,6 @@ while True:
                         if user_time:
 
                             DROP_TIME = user_time
-                        
-                        if first_commit:
-                            
-                            DROP_TIME = int(time.time())
 
                         show_drop_time = datetime.fromtimestamp(DROP_TIME).strftime("%H:%M:%S")
                         
@@ -3814,8 +3853,6 @@ while True:
                             
                             console.print(f"[AVAILABLE ~ [green]{available}[/]] [REDEEMED ~ [yellow]{redeemed}[/]] [MINTED ~ [cyan]{minted}%[/]]\n")
                             
-                        first_commit = True
-
                         print("\n")
 
                         status = Prompt.ask("[purple]>>[/] Insert 'e' to exit or 'r' to retry mint", choices=["e", "r"])
@@ -3827,11 +3864,13 @@ while True:
                             menu = True
 
                             break
+                        
+                        else:
+                            
+                            DROP_TIME = int(time.time())
 
             elif mode in [10]:
-            
-                first_commit = False
-                
+                            
                 bf_launchpad = BifrostLaunchpad(
                     bf_auth=bf_auth_session
                 )
@@ -3839,16 +3878,24 @@ while True:
                 while True:
 
                     clear()                        
+
+                    with console.status(f"[yellow]Downloading candy machine data[/]", spinner="bouncingBar", speed=1.5):
+                                                
+                        cm_metadata = bf_launchpad.get_cm_state(CM)
                         
+                        if not cm_metadata:
+
+                            clear()
+
+                            console.print("[red] ERROR![/] [yellow]Failed to fetch candy machine data\n[/]")
+
+                            break
+
                     trs = []
 
                     if user_time:
 
                         DROP_TIME = user_time
-                    
-                    if first_commit:
-                        
-                        DROP_TIME = int(time.time())
 
                     show_drop_time = datetime.fromtimestamp(DROP_TIME).strftime("%H:%M:%S")
                     
@@ -3867,11 +3914,15 @@ while True:
                         wait_for_mints()
                         
                     while True:
-
-                        recent_blockhash = get_blockhash(sol_rpc)
-
-                        if recent_blockhash:
+                        
+                        token_mint = cm_metadata["tokenMint"]
+                        
+                        bonding_info = bf_launchpad.get_bonding_info(token_mint)
+                        
+                        if bonding_info:
                             
+                            token_bonding = bonding_info["publicKey"]
+                                                        
                             console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Initialazing transactions[/]\n".format("ALL", "INIT", show_drop_time)), end="")
                             
                             break
@@ -3883,7 +3934,11 @@ while True:
                     if user_time:
                         
                         wait_for_drop()
+                        
+                    bonding_price = bf_launchpad.get_bonding_price(token_bonding)
 
+                    max_price = bf_launchpad.get_max_price(bonding_price or cm_metadata["price"])
+                    
                     for wallet in wallets:
 
                         mintT = Thread(target=mint, args=[wallet, recent_blockhash])
@@ -3903,8 +3958,6 @@ while True:
                         
                         console.print(f"[AVAILABLE ~ [green]{available}[/]] [REDEEMED ~ [yellow]{redeemed}[/]] [MINTED ~ [cyan]{minted}%[/]]\n")
                         
-                    first_commit = True
-
                     print("\n")
 
                     status = Prompt.ask("[purple]>>[/] Insert 'e' to exit or 'r' to retry mint", choices=["e", "r"])
@@ -3916,3 +3969,7 @@ while True:
                         menu = True
 
                         break
+                    
+                    else:
+                        
+                        DROP_TIME = int(time.time())
