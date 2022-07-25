@@ -50,7 +50,7 @@ class MagicEdenLaunchpad():
 
 
     @staticmethod
-    def get_collection_info(url: str):
+    def get_collection_info(url: str) -> dict | None:
         
         split_url = urlsplit(url)
 

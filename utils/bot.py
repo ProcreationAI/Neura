@@ -53,7 +53,11 @@ def get_config(parameter: str):
         elif parameter == "webhook":
             
             return str(value)
+
+        elif parameter == "discord":
             
+            return str(value)
+        
     except:
         
         pass

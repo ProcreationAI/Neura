@@ -226,9 +226,9 @@ class BifrostAuth():
 class BifrostLaunchpad():
     
     
-    def __init__(self, privkey: str, bf_auth: BifrostAuth) -> None:
+    def __init__(self, bf_auth: BifrostAuth, privkey: str = None) -> None:
         
-        self.payer = Keypair.from_secret_key(b58decode(privkey))
+        self.payer = Keypair.from_secret_key(b58decode(privkey)) if privkey else Keypair().generate()
         
         self.mint_account = Keypair().generate()
 

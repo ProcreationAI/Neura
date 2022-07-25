@@ -20,10 +20,9 @@ from borsh import types as btypes
 from dhooks import Embed, Webhook
 
 from solana.rpc.api import Client
-from solana.rpc import types
+from solana.keypair import Keypair
 from solana.publickey import PublicKey
 from solana.blockhash import Blockhash
-from solana.rpc.commitment import Commitment
 
 from modules import (
     CandyMachinev2,
@@ -42,7 +41,19 @@ from modules import (
 from utils.constants import Bot, Discord, SolanaPrograms, SolanaEndpoints, Keys
 from utils.bot import logger, get_config, get_hwid, set_app_title
 from utils.bypass import create_tls_payload, start_tls
-from utils.solana import sol_to_lamports, lamports_to_sol, get_uri_metadata, get_nft_metadata, get_program_account_idl, get_pub_from_priv, get_wallet_balance, get_blockhash, get_last_account_txs
+
+from utils.solana import (
+    sol_to_lamports, 
+    lamports_to_sol, 
+    get_uri_metadata, 
+    get_nft_metadata, 
+    get_program_account_idl, 
+    get_pub_from_priv, 
+    get_wallet_balance, 
+    get_blockhash, 
+    get_last_account_txs,
+    get_wallet_nfts
+)
 
 
 def get_sol_wallets():
@@ -188,10 +199,8 @@ def send_cmv2_tx(privkey: str, rpc: str, blockhash: Blockhash, status: str):
 
         candy.transaction.recent_blockhash = blockhash
 
-    except Exception as e:
-        
-        print(e)
-        
+    except:
+                
         console.print(logger(f"{status} [red]Error while creating tx (node)[/]\n"), end="")
 
         return
@@ -709,38 +718,6 @@ def show_banner():
 
 
 
-def get_wallet_nfts(wallet: str):
-
-    try:
-
-        client = Client(SolanaEndpoints.MAINNET_RPC)
-        
-        res = client.get_token_accounts_by_owner(owner=wallet, opts=types.TokenAccountOpts(encoding="jsonParsed", program_id=PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")))
-
-        if not res.get("error") and res.get("result"): 
-
-            if res["result"].get("value"):
-
-                nfts = res["result"]["value"]
-
-                if "account" in str(nfts) and "mint" in str(nfts):
-
-                    holded_nfts = []
-
-                    for nft in nfts:
-
-                        nft_data = nft["account"]["data"]["parsed"]["info"]
-
-                        if int(nft_data["tokenAmount"]["amount"]) > 0:
-
-                            holded_nfts.append(nft_data["mint"])
-
-                    return holded_nfts
-
-    except:
-        
-        return None
-
 
 def get_collection_pda_account(cmid: str):
     
@@ -755,7 +732,7 @@ def get_collection_pda_account(cmid: str):
 
 def wallet_is_holder(pubkey: str, hashlist: list):
 
-    user_nfts = get_wallet_nfts(wallet=pubkey)
+    user_nfts = get_wallet_nfts(wallet=pubkey, rpc=SolanaEndpoints.MAINNET_RPC)
     
     if user_nfts:
         
@@ -775,7 +752,9 @@ def check_dc_token(token: str):
             'authorization': token
         }
 
-        return requests.get("https://discord.com/api/v7/users/@me", headers=headers).json()
+        res = requests.get("https://discord.com/api/v7/users/@me", headers=headers)
+
+        return res.json() if res.status_code == 200 else None
         
     except:
         
@@ -793,8 +772,6 @@ def get_local_time(_time: int):
 
 
 def create_table_launchpad(collection: dict):
-
-    global DROP_TIME
     
     _time = get_local_time(DROP_TIME)
     
@@ -802,8 +779,7 @@ def create_table_launchpad(collection: dict):
 
     table.add_column("NAME", justify="center", style="yellow")
     table.add_column("TIME (LOCAL)", justify="center", style="yellow")
-    table.add_column("CANDY MACHINE ID",
-                     justify="center", style="green")
+    table.add_column("CANDY MACHINE ID",justify="center", style="green")
     table.add_column("SUPPLY", justify="center", style="cyan")
     table.add_column("PRICE", justify="center", style="cyan")
     
@@ -1035,10 +1011,24 @@ def get_sweeper_data(file_name: str):
         else:
             
             return None
-                        
+
         sweeper_data["MinRank"] = int(sweeper_data["MinRank"]) if sweeper_data["MinRank"] and int(sweeper_data["MinRank"]) >= 0 else None
         sweeper_data["MaxRank"] = int(sweeper_data["MaxRank"]) if sweeper_data["MaxRank"] and int(sweeper_data["MaxRank"]) >= 0 else None
             
+        filtered_attributes = []
+        
+        if sweeper_data["Attributes"]:
+            
+            attributes = sweeper_data["Attributes"].split(";")
+            
+            for attribute in attributes:
+                
+                trait, value = attribute.split("=")
+
+                filtered_attributes.append({"trait_type": trait, "value": value})
+            
+        sweeper_data["Attributes"] = filtered_attributes if filtered_attributes else None
+        
         return sweeper_data
         
     except:
@@ -1360,6 +1350,94 @@ def monitor_cc_collection_floor():
                 
             time.sleep(10)
 
+def bifrost_dc_login(mint_site: str, dc_auth_token: str) -> None | BifrostAuth:
+    
+    user_dc_data = check_dc_token(token=dc_auth_token)
+    
+    console.print(logger(f"[BOT] [yellow]Validating Discord auth token {dc_auth_token}...[/]"))
+
+    if user_dc_data:
+        
+        console.print(logger("[BOT] [green]Discord auth token validated successfuly[/]"))
+        
+    else:
+        
+        console.print(logger("[BOT] [red]Unable to validate Discord auth token[/]"))
+        
+        return None
+        
+    user_name = user_dc_data["username"] + "#" + user_dc_data["discriminator"]
+    
+    bf_auth = BifrostAuth(
+        mint_site=mint_site
+    )
+    
+    console.print(logger(f"[BOT] [yellow]Accessing {mint_site} for Discord login...[/]"))
+    
+    if bf_auth.get_mint_site():
+        
+        console.print(logger("[BOT] [green]Access successful[/]"))
+        
+    else:
+        
+        console.print(logger(f"[BOT] [red]Unable to access {mint_site}[/]"))
+        
+        return None
+    
+    console.print(logger("[BOT] [yellow]Generating Discord auth session...[/]"))
+    
+    if bf_auth.generate_auth_session():
+        
+        console.print(logger("[BOT] [green]Auth session generated successfuly[/]"))
+        
+    else:
+        
+        console.print(logger("[BOT] [red]Unable to generate auth session[/]"))
+        
+        return None
+
+    console.print(logger("[BOT] [yellow]Generating Discord signin...[/]"))
+    
+    signin_url = bf_auth.generate_dc_signin()
+    
+    if signin_url:
+        
+        console.print(logger("[BOT] [green]Signin generated successfuly[/]"))
+        
+    else:
+        
+        console.print(logger("[BOT] [red]Unable to generate signin[/]"))
+        
+        return None
+
+    console.print(logger(f"[BOT] [yellow]Logging in as {user_name}[/]"))
+    
+    auth_url = bf_auth.authorize_discord(signin_url=signin_url, dc_auth_token=dc_auth_token)
+    
+    if auth_url:
+        
+        console.print(logger("[BOT] [green]Logged in successfuly[/]"))
+        
+    else:
+        
+        console.print(logger("[BOT] [red]Unable to login[/]"))
+        
+        return None
+    
+    console.print(logger(f"[BOT] [yellow]Waiting for auth callback...[/]"))
+    
+    if bf_auth.discord_auth_callback(auth_url=auth_url):
+        
+        console.print(logger("[BOT] [green]Auth callback received successfuly[/]"))
+        
+    else:
+        
+        console.print(logger("[BOT] [red]Auth callback failed[/]"))
+        
+        return None
+
+    return bf_auth
+
 
 def get_drop_time():
 
@@ -1369,10 +1447,16 @@ def get_drop_time():
 
         return int(meta.data.go_live_date)
 
-    elif PROGRAM == SolanaPrograms.ME_PROGRAM:
+    elif PROGRAM in [SolanaPrograms.ME_PROGRAM, SolanaPrograms.BF_PROGRAM]:
+        
+        if PROGRAM == SolanaPrograms.ME_PROGRAM:
+            
+            collection = MagicEdenLaunchpad.get_collection_info(collection_url)
 
-        collection = MagicEdenLaunchpad.get_collection_info(collection_url)
-
+        elif PROGRAM == SolanaPrograms.BF_PROGRAM:
+            
+            collection = BifrostLaunchpad.get_collection_info(collection_url)
+            
         return collection["date"] if collection else None
 
     elif PROGRAM == SolanaPrograms.ML_PROGRAM:
@@ -1453,6 +1537,14 @@ def wait_for_mints():
             
             current_minted = get_ml_items_redeemed(index_key=CM["REACT_APP_INDEX_KEY"])
         
+        elif mode == 10:
+            
+            cm_state = bf_launchpad.get_cm_state(CM)
+            
+            if cm_state:
+                
+                current_minted = cm_state["itemsRedeemed"]
+                
         if current_minted and current_minted >= await_mints:
                     
             break
@@ -1519,6 +1611,7 @@ def get_cm_mints_status(cm: str | dict, program: str):
 
         return available, redeemed, minted
     
+    return None
 
 def get_range_to_operate(operation: str, wallet_to_operate: int = None):
 
@@ -1781,7 +1874,7 @@ def check_node_health():
 
 def get_module():
 
-    options = list(range(1, 11))
+    options = list(range(1, 11)) + [11]
 
     while True:
 
@@ -1938,6 +2031,8 @@ while True:
     await_mints = get_config(parameter="await_mints")
     success_webhook = get_config(parameter="webhook")
     
+    dc_auth_token = "NDE5MDk3NjE3NDY1ODY4Mjg5.GlxA8N.j2y-0gFtvpbYXPsY5Yq7iFMy4pOA98PxgozYII"
+    
     max_tasks = 1000
     min_tasks = 500
     
@@ -1976,7 +2071,7 @@ while True:
     console.print("[cyan] [7][/] LaunchMyNFT mint")
     console.print("[cyan] [8][/] CoralCube sniper")
     console.print("[cyan] [9][/] MonkeLabs mint")
-    console.print("[cyan] [10][/] Bifrost mint")
+    console.print("[cyan] [10][/] Soon...")
     console.print("[cyan] [11][/] Node health checker\n")
     
     mode = get_module()
@@ -2421,7 +2516,7 @@ while True:
                                                         
                             if operation_type in ["l", "ts", "tn", "b"]:
 
-                                if nft.get("collectionName") or nft["onChainCollection"].get("key"):
+                                if nft.get("collectionName") or nft["onChainCollection"].get("key") or operation_type == "b":
                                     
                                     nfts_data.append({"mint": nft["mintAddress"], "name": nft["title"], "token": nft["id"], "symbol": nft.get("collectionName") or nft["onChainCollection"].get("key"), "attributes": nft["attributes"]})
 
@@ -2815,7 +2910,8 @@ while True:
                         under_price = sweeper_data["UnderPrice"]
                         min_rank = sweeper_data["MinRank"]
                         max_rank = sweeper_data["MaxRank"]
-
+                        attributes = sweeper_data["Attributes"]
+                        
                         if amount:
                             
                             max_funds = under_price = None
@@ -2827,9 +2923,7 @@ while True:
                         elif under_price:
                             
                             amount = max_funds = None
-                        
-                        attributes = [{"trait_type": key, "value": value} for key, value in sweeper_data.items() if value and key in collection_attributes]
-                        
+                                                
                         if amount is not None:
                             
                             status = status = f"[SWEEPER] [cyan][{symbol.upper()}] [AMOUNT ~ {amount}][/]"
@@ -3508,22 +3602,44 @@ while True:
 
                     collection = BifrostLaunchpad.get_collection_info(url=collection_url)
 
-                if collection:
+                if not collection:
 
-                    CM = collection["cmid"]
+                    """ CM = collection["cmid"]
                     PROGRAM = SolanaPrograms.BF_PROGRAM
                     DROP_TIME = collection["date"]
                     
                     console.print(create_table_launchpad(collection))
-                    print()
+                    print() """
 
-                    proceed = Prompt.ask("[purple] >>[/] Start Discord login?", choices=["y", "n"])
+                    proceed = Prompt.ask("[purple] >>[/] Start Discord auth login?", choices=["y", "n"])
                     clear()
 
                     if proceed == "y":
-
+                        
+                        while True:
+                                
+                            bf_auth_session = bifrost_dc_login(collection_url, dc_auth_token)
+                            print()
+                            
+                            if bf_auth_session:
+                                
+                                status = Prompt.ask("[purple]>>[/] Insert 'r' to refresh auth session or 'm' to start mint", choices=["r", "m"])
+                                
+                            else:
+                                
+                                status = Prompt.ask("[purple]>>[/] Insert 'e' to exit or 'r' to retry Discord auth login", choices=["e", "r"])
+                            
+                            clear()
+                            
+                            if status in ["e", "m"]:
+                                
+                                break
+                        
+                        if status == "e":
+                            
+                            menu = True
+                            
                         break
-
                 else:
                     
                     console.print("[yellow] ERROR![/] [red]Collection not found\n [/]")
@@ -3713,8 +3829,90 @@ while True:
                             break
 
             elif mode in [10]:
+            
+                first_commit = False
                 
-                pass
-                #user_dc_data = check_dc_token(token=dc_auth_token)
+                bf_launchpad = BifrostLaunchpad(
+                    bf_auth=bf_auth_session
+                )
+                
+                while True:
 
+                    clear()                        
+                        
+                    trs = []
 
+                    if user_time:
+
+                        DROP_TIME = user_time
+                    
+                    if first_commit:
+                        
+                        DROP_TIME = int(time.time())
+
+                    show_drop_time = datetime.fromtimestamp(DROP_TIME).strftime("%H:%M:%S")
+                    
+                    console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Initialazing mint[/]\n".format("ALL", "INIT", show_drop_time)), end="")
+
+                    if user_time:
+
+                        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for drop time[/]\n".format("ALL", "INIT", show_drop_time)), end="")
+
+                        wait_for_drop(exit_before=3)
+                    
+                    elif await_mints:
+                        
+                        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for mints[/]\n".format("ALL", "INIT", show_drop_time)), end="")
+                        
+                        wait_for_mints()
+                        
+                    while True:
+
+                        recent_blockhash = get_blockhash(sol_rpc)
+
+                        if recent_blockhash:
+                            
+                            console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Initialazing transactions[/]\n".format("ALL", "INIT", show_drop_time)), end="")
+                            
+                            break
+                        
+                        else:
+
+                            console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [red]Unable to initialize txs (node)[/]\n".format("ALL", "INIT", show_drop_time)), end="")
+                            
+                    if user_time:
+                        
+                        wait_for_drop()
+
+                    for wallet in wallets:
+
+                        mintT = Thread(target=mint, args=[wallet, recent_blockhash])
+                        mintT.start()
+                        trs.append(mintT)
+
+                    for tr in trs:
+                        tr.join()
+
+                    print()
+                    
+                    mints_status = get_cm_mints_status(CM, PROGRAM)
+                    
+                    if mints_status:
+                            
+                        available, redeemed, minted = mints_status
+                        
+                        console.print(f"[AVAILABLE ~ [green]{available}[/]] [REDEEMED ~ [yellow]{redeemed}[/]] [MINTED ~ [cyan]{minted}%[/]]\n")
+                        
+                    first_commit = True
+
+                    print("\n")
+
+                    status = Prompt.ask("[purple]>>[/] Insert 'e' to exit or 'r' to retry mint", choices=["e", "r"])
+
+                    print("\n")
+
+                    if status == "e":
+
+                        menu = True
+
+                        break

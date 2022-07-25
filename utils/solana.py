@@ -9,10 +9,38 @@ from solana.rpc.api import Client
 from anchorpy import Program, Wallet, Provider
 from solana.rpc.async_api import AsyncClient
 from solana.keypair import Keypair
+from solana.rpc import types
 
 from lib.idl import AccountClient
 
 
+def get_wallet_nfts(wallet: str, rpc: str):
+
+
+    client = Client(rpc)
+    
+    try:
+        
+        res = client.get_token_accounts_by_owner(owner=wallet, opts=types.TokenAccountOpts(encoding="jsonParsed", program_id=PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")))
+
+        nfts = res["result"]["value"]
+
+        holded_nfts = []
+
+        for nft in nfts:
+
+            nft_data = nft["account"]["data"]["parsed"]["info"]
+
+            if int(nft_data["tokenAmount"]["amount"]) > 0:
+
+                holded_nfts.append(nft_data["mint"])
+
+        return holded_nfts
+
+    except:
+        
+        return None
+    
 def get_last_account_txs(rpc: str, account: str, limit: int, commitment: str, until: str = None):
 
     try:
@@ -205,7 +233,9 @@ async def get_program_account_idl(name: str, account: str, prog: str, rpc: str):
 
         return candyMachine
 
-    except:
+    except Exception as e:
+        
+        print(e)
                 
         if program:
             await program.close()
