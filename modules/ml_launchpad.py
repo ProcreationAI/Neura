@@ -166,10 +166,10 @@ class MonkeLabsLaunchpad():
             AccountMeta(pubkey=PublicKey(ML_AUTH), is_signer=False, is_writable=True),
             AccountMeta(pubkey=PublicKey(self.accounts["REACT_APP_INDEX_KEY"]), is_signer=False, is_writable=True),
             AccountMeta(pubkey=PublicKey(self.accounts["REACT_APP_WHITELIST_KEY"] or Keypair.generate().public_key), is_signer=False, is_writable=False),
-            AccountMeta(pubkey=payer_ata, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=payer_ata, is_signer=False, is_writable=False),
             AccountMeta(pubkey=PublicKey(SYSTEM_PROGRAM_ID), is_signer=False, is_writable=False),
             AccountMeta(pubkey=MINT_METADATA[0], is_signer=False, is_writable=True),
-            AccountMeta(pubkey=mint_account.public_key, is_signer=True, is_writable=True),
+            AccountMeta(pubkey=mint_account.public_key, is_signer=False, is_writable=False),
             AccountMeta(pubkey=PublicKey(METADATA_PROGRAM_ID), is_signer=False, is_writable=False),
             AccountMeta(pubkey=PublicKey(SYSTEM_RENT_PROGRAM), is_signer=False, is_writable=False),
             AccountMeta(pubkey=PublicKey(SYSTEM_INSTRUCTIONS_PROGRAM), is_signer=False, is_writable=False),
@@ -223,9 +223,7 @@ class MonkeLabsLaunchpad():
         try:
             
             self.transaction.sign(*self.signers)
-            
-            self.transaction.fee_payer = self.payer.public_key
-            
+                        
             tx = self.transaction.serialize(verify_signatures=False)
 
             tx_hash = self.client.send_raw_transaction(tx, OPTS)['result']

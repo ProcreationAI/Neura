@@ -128,12 +128,12 @@ class CandyMachinev2():
         keys = [
             AccountMeta(pubkey=PublicKey(self.cmid),is_signer=False, is_writable=True),
             AccountMeta(pubkey=CANDY_MACHINE_CREATOR[0], is_signer=False, is_writable=False),
-            AccountMeta(pubkey=self.payer.public_key,is_signer=True, is_writable=True),
+            AccountMeta(pubkey=self.payer.public_key,is_signer=True, is_writable=False),
             AccountMeta(pubkey=cm_wallet, is_signer=False, is_writable=True),
             AccountMeta(pubkey=METADATA_PROGRAM_ADDRESS[0], is_signer=False, is_writable=True),
-            AccountMeta(pubkey=mint_account.public_key,is_signer=True, is_writable=True),
-            AccountMeta(pubkey=self.payer.public_key,is_signer=True, is_writable=True),
-            AccountMeta(pubkey=self.payer.public_key,is_signer=True, is_writable=True),
+            AccountMeta(pubkey=mint_account.public_key,is_signer=False, is_writable=True),
+            AccountMeta(pubkey=self.payer.public_key,is_signer=True, is_writable=False),
+            AccountMeta(pubkey=self.payer.public_key,is_signer=True, is_writable=False),
             AccountMeta(pubkey=EDITION_PROGRAM_ADDRESS[0], is_signer=False, is_writable=True),
             AccountMeta(pubkey=PublicKey(METADATA_PROGRAM_ID),is_signer=False, is_writable=False),
             AccountMeta(pubkey=PublicKey(TOKEN_PROGRAM_ID),is_signer=False, is_writable=False),
@@ -229,16 +229,16 @@ class CandyMachinev2():
             )
 
             keys = [
-                AccountMeta(pubkey=PublicKey(self.cmid), is_writable=True, is_signer=False),
-                AccountMeta(pubkey=METADATA_PROGRAM_ADDRESS[0], is_writable=True, is_signer=False),
-                AccountMeta(pubkey=self.payer.public_key, is_signer=True, is_writable=True),
+                AccountMeta(pubkey=PublicKey(self.cmid), is_writable=False, is_signer=False),
+                AccountMeta(pubkey=METADATA_PROGRAM_ADDRESS[0], is_writable=False, is_signer=False),
+                AccountMeta(pubkey=self.payer.public_key, is_signer=True, is_writable=False),
                 AccountMeta(pubkey=COLLECTION_PDA[0], is_writable=True, is_signer=False),
                 AccountMeta(pubkey=PublicKey(METADATA_PROGRAM_ID), is_signer=False, is_writable=False),
                 AccountMeta(pubkey=PublicKey(SYSTEM_INSTRUCTIONS_PROGRAM), is_signer=False, is_writable=False),
                 AccountMeta(pubkey=PublicKey(collection_mint), is_signer=False, is_writable=False),
                 AccountMeta(pubkey=COLLECION_METADATA[0], is_writable=False, is_signer=False),
                 AccountMeta(pubkey=COLLECTION_EDITION[0], is_writable=False, is_signer=False),
-                AccountMeta(pubkey=cm_auth, is_signer=False, is_writable=True),
+                AccountMeta(pubkey=cm_auth, is_signer=False, is_writable=False),
                 AccountMeta(pubkey=COLLECTION_RECORD[0], is_writable=False, is_signer=False)
             ]
 
@@ -288,7 +288,7 @@ class CandyMachinev2():
             return None
 
         except:
-                        
+                                    
             return False
 
 

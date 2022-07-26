@@ -95,7 +95,7 @@ class LaunchMyNftLaunchpad():
         ]
 
         price_data = list(self.price.to_bytes(8, "little"))
-        main_data = list(bytes.fromhex("bc25b0a0790c14c70100000000"))
+        main_data = list(bytes.fromhex("d413c38e42cb08de01000000000000000000000000"))
         
         data = main_data + price_data
 

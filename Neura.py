@@ -84,9 +84,9 @@ def get_sol_wallets():
 
                             tasks = int(tasks) if int(tasks) > 0 else 0
 
-                            if mode in [1, 2, 7, 9] and tasks:
+                            """ if mode in [1, 2, 7, 9] and tasks:
                                     
-                                """ if tasks > max_tasks:
+                                if tasks > max_tasks:
 
                                     tasks = max_tasks
 
@@ -399,6 +399,8 @@ def send_bf_tx(privkey: str, rpc: str, max_price: float, status: str):
         privkey=privkey
     )
     
+    console.print(logger(f"{status} [yellow]Sending transaction[/]\n"), end="")
+    
     raw_txs = bf_launchpad.get_transactions(
         cmid=CM,
         token_bonding=token_bonding,
@@ -426,7 +428,7 @@ def send_bf_tx(privkey: str, rpc: str, max_price: float, status: str):
     
     else:
         
-        console.print(logger(f"{status} [red]Error while creating tx[/]\n"), end="")
+        console.print(logger(f"{status} [red]Error while sending tx[/]\n"), end="")
         
 
 def send_sniper_webhook(mint: str, tx: str, price: float, sniping_time: float, webhook: str):
@@ -1919,7 +1921,7 @@ def check_node_health():
 
 def get_module():
 
-    options = list(range(1, 11)) + [11]
+    options = list(range(1, 10)) + [11]
 
     while True:
 
@@ -3319,7 +3321,7 @@ while True:
 
             clear()
             
-            console.print(create_table_wallets[wallet])       
+            console.print(create_table_wallets([wallet]))       
 
             start_sniper = Prompt.ask("[purple] >>[/] Are you sure you want to continue? This will start the sniper instantly", choices=["y", "n"])
             
