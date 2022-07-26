@@ -61,6 +61,7 @@ def bifrost_dc_login(mint_site: str, dc_auth_token: str) -> None | requests.Sess
         
         return None
 
+    print(json.dumps(bf_auth.session.headers, indent=3))
     print("Generating Discord signin...")
     
     signin_url = bf_auth.generate_dc_signin()

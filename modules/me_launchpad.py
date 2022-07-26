@@ -36,15 +36,11 @@ class MagicEdenLaunchpad():
     
     def __init__(self, privkey: str, cmid: str, rpc: str, candy_machine_meta: Program):
 
-        self.config_addres = candy_machine_meta.config
-        self.wallet_auth = candy_machine_meta.wallet_authority
-        self.order_info = candy_machine_meta.order_info
-        self.notary = candy_machine_meta.notary
-        
         self.cmid = cmid
         
+        self.cm_meta = candy_machine_meta
+        
         self.client = Client(rpc)
-        self.async_client = AsyncClient(rpc)
         
         self.payer = Keypair.from_secret_key(b58decode(privkey))
 
@@ -159,10 +155,10 @@ class MagicEdenLaunchpad():
                 'needsNotary': True,
             },
             'accounts': {
-                'config': str(self.config_addres),
+                'config': str(self.cm_meta.config_addres),
                 'candyMachine': str(self.cmid),
                 'launchStagesInfo': str(self.LAUNCH_STAGES_ADDRESS[0]),
-                'candyMachineWalletAuthority': str(self.wallet_auth),
+                'candyMachineWalletAuthority': str(self.cm_meta.wallet_auth),
                 'mintReceiver': str(self.payer.public_key),
                 'payer': str(self.payer.public_key),
                 'payTo': str(self.pay_to_ata),
@@ -176,9 +172,9 @@ class MagicEdenLaunchpad():
                 'tokenProgram': TOKEN_PROGRAM_ID,
                 'systemProgram': SYSTEM_PROGRAM_ID,
                 'rent': SYSTEM_RENT_PROGRAM,
-                'orderInfo': str(self.order_info),
+                'orderInfo': str(self.cm_meta.order_info),
                 'slotHashes': SYSTEM_SLOT_HASHES,
-                'notary': str(self.notary),
+                'notary': str(self.cm_meta.notary),
                 'associatedTokenProgram': ASSOCIATED_TOKEN_ID,
             },
         }

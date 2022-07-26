@@ -29,9 +29,9 @@ class LaunchMyNftLaunchpad():
     def __init__(self, privkey: str, rpc: str, cmid: str, candy_machine_meta):
 
         self.cmid = cmid
-        self.wallet = candy_machine_meta.wallet
-        self.price = int(candy_machine_meta.data.price)
         
+        self.cm_meta = candy_machine_meta
+                
         self.client = Client(rpc)
         self.payer = Keypair.from_secret_key(b58decode(privkey))
 
@@ -79,7 +79,7 @@ class LaunchMyNftLaunchpad():
         keys = [
             AccountMeta(pubkey=PublicKey(self.cmid),is_writable=True, is_signer=False),
             AccountMeta(pubkey=self.payer.public_key,is_signer=True, is_writable=True),
-            AccountMeta(pubkey=PublicKey(self.wallet),is_writable=True, is_signer=False),
+            AccountMeta(pubkey=PublicKey(self.cm_meta.wallet),is_writable=True, is_signer=False),
             AccountMeta(pubkey=PublicKey(LMN_TRESAURY),is_writable=True, is_signer=False),
             AccountMeta(pubkey=METADATA_PROGRAM_ADDRESS[0], is_writable=True, is_signer=False),
             AccountMeta(pubkey=mint_account.public_key,is_writable=True, is_signer=True),
@@ -94,7 +94,7 @@ class LaunchMyNftLaunchpad():
             AccountMeta(pubkey=PublicKey(SYSTEM_CLOCK_PROGRAM),is_signer=False, is_writable=False)
         ]
 
-        price_data = list(self.price.to_bytes(8, "little"))
+        price_data = list(int(self.cm_meta.price).to_bytes(8, "little"))
         main_data = list(bytes.fromhex("d413c38e42cb08de01000000000000000000000000"))
         
         data = main_data + price_data

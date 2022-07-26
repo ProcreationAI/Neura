@@ -63,57 +63,47 @@ def get_sol_wallets():
     try:
 
         with open('sol-wallets.csv', 'r') as f:
-
-            reader = csv.reader(f)
-
-            next(reader)
+                
+            reader = csv.DictReader(f)
 
             for wallet in reader:
 
-                if not any(data == "" for data in wallet):
+                privkey = wallet["privateKey"]
+                name = wallet["name"]
+                tasks = wallet["tasks"]
+                
+                name = name if len(name) <= 9 else name[:9]
+                tasks = int(tasks) if int(tasks) > 0 else 0
+                address = get_pub_from_priv(privkey)
+                
+                if mode in [1, 2, 7, 9] and tasks:
+                        
+                    if tasks > max_tasks:
 
-                    name, privkey, tasks = wallet
+                        tasks = max_tasks
 
-                    name = name if len(name) <= 9 else name[:9]
+                    elif tasks < min_tasks:
+                        
+                        tasks = min_tasks
+                        
+                if address:
 
-                    address = get_pub_from_priv(privkey)
+                    wallets.append(
 
-                    if address:
+                        {
+                            "name": name.upper(),
+                            "address": address,
+                            "privkey": privkey,
+                            "tasks": int(tasks)
+                        }
 
-                        try:
+                    )
 
-                            tasks = int(tasks) if int(tasks) > 0 else 0
-
-                            """ if mode in [1, 2, 7, 9] and tasks:
-                                    
-                                if tasks > max_tasks:
-
-                                    tasks = max_tasks
-
-                                elif tasks < min_tasks:
-                                    
-                                    tasks = min_tasks """
-                                
-                            wallets.append(
-
-                                {
-                                    "name": name.upper(),
-                                    "address": address,
-                                    "privkey": privkey,
-                                    "tasks": int(tasks)
-                                }
-
-                            )
-
-                        except ValueError:
-
-                            pass
     except:
-
+        
         pass
 
     return wallets
-
 
 def clear(newline: bool = True):
 
@@ -129,7 +119,7 @@ def clear(newline: bool = True):
 
         print()
 
-def mint(wallet: dict, recent_blockhash: Blockhash = None, max_price: float = None):
+def mint(wallet: dict):
 
     name = wallet["name"]
     tasks = wallet["tasks"]
@@ -431,7 +421,7 @@ def send_bf_tx(privkey: str, rpc: str, max_price: float, status: str):
         console.print(logger(f"{status} [red]Error while sending tx[/]\n"), end="")
         
 
-def send_sniper_webhook(mint: str, tx: str, price: float, sniping_time: float, webhook: str):
+def send_sniper_webhook(mint: str, tx: str, price: float, webhook: str):
     
     nft_data = MagicEden.get_nft_data(mint=mint)
     
@@ -451,10 +441,9 @@ def send_sniper_webhook(mint: str, tx: str, price: float, sniping_time: float, w
         
         embed.set_title(name, url)
         embed.set_thumbnail(img)
-        embed.set_footer(Discord.EMBED_FOOTER_TXT, Discord.EMBED_FOOTER_IMG)
+        embed.set_footer(f"Neura - {Bot.VERSION}", Discord.EMBED_FOOTER_IMG)
         
         embed.add_field("**Price**", f"{price} SOL", inline=False)
-        #embed.add_field("**Speed**", f"{sniping_time} s", inline=False)
         embed.add_field("**Transaction**", f"[Explorer]({tx_url})", inline=False)
         
         try:
@@ -2072,13 +2061,11 @@ while True:
     clear(newline=False)
 
     sol_rpc = get_config(parameter="sol_rpc")
-    eth_rpc = get_config(parameter="eth_rpc")
     user_time = get_config(parameter="time")
     advanced_mode = get_config(parameter="advanced")
     await_mints = get_config(parameter="await_mints")
     success_webhook = get_config(parameter="webhook")
-    
-    dc_auth_token = "NDE5MDk3NjE3NDY1ODY4Mjg5.GlxA8N.j2y-0gFtvpbYXPsY5Yq7iFMy4pOA98PxgozYII"
+    dc_auth_token = get_config("discord")
     
     max_tasks = 1000
     min_tasks = 500
@@ -2112,7 +2099,7 @@ while True:
     console.print("[cyan] [1][/] CandyMachine mint")
     console.print("[cyan] [2][/] MagicEden mint")
     console.print("[cyan] [3][/] MagicEden sniper")
-    console.print("[cyan] [4][/] SOL wallets manager")
+    console.print("[cyan] [4][/] Wallets manager")
     console.print("[cyan] [5][/] MagicEden sweeper")
     console.print("[cyan] [6][/] FamousFox sniper")
     console.print("[cyan] [7][/] LaunchMyNFT mint")
@@ -2329,8 +2316,6 @@ while True:
                                         current_txs.append(signature)
                                         
                                         console.print(logger(f"{status} [yellow]Fetching new data...[/]"))
-
-                                        start_time = time.time()
                                         
                                         listing_info = magic_eden.check_tx_is_listing(tx=signature)
                                                                                 
@@ -2450,10 +2435,6 @@ while True:
                                 console.print(logger(f"{status} [yellow]Sniped {nft_name}[/] [purple]>[/] [cyan]{price_in_sol} SOL[/]"))
                     
                                 console.print(logger(f"{status} [yellow]Purchasing...[/]"))
-
-                                final_time = time.time()
-                                
-                                sniping_time = round(final_time - start_time, 1)
                                 
                                 tx_hash = magic_eden.buy_nft_api(
                                     seller=seller,
@@ -2469,7 +2450,6 @@ while True:
                                         mint=mint_address,
                                         tx=tx_hash,
                                         price=price_in_sol,
-                                        sniping_time=sniping_time,
                                         webhook=success_webhook or None
                                     )
                                     
@@ -3323,6 +3303,8 @@ while True:
             
             console.print(create_table_wallets([wallet]))       
 
+            print()
+            
             start_sniper = Prompt.ask("[purple] >>[/] Are you sure you want to continue? This will start the sniper instantly", choices=["y", "n"])
             
             print()
@@ -3424,8 +3406,6 @@ while True:
                                         current_txs.append(signature)
                                         
                                         console.print(logger(f"{status} [yellow]Fetching new data...[/]"))
-
-                                        start_time = time.time()
                                         
                                         listing_info = coral_cube.check_tx_is_listing(tx=signature)
                                         
@@ -3542,10 +3522,6 @@ while True:
                                         
                                 console.print(logger(f"{status} [yellow]Purchasing...[/]"))
                                 
-                                final_time = time.time()
-                                
-                                sniping_time = round(final_time - start_time, 1)
-                                
                                 tx_hash = coral_cube.buy_nft(
                                     seller=seller,
                                     mint=mint_address,
@@ -3561,7 +3537,6 @@ while True:
                                         mint=mint_address,
                                         tx=tx_hash,
                                         price=price_in_sol,
-                                        sniping_time=sniping_time,
                                         webhook=success_webhook or None
                                     )
                                     
@@ -3838,7 +3813,7 @@ while True:
 
                         for wallet in wallets:
 
-                            mintT = Thread(target=mint, args=[wallet, recent_blockhash])
+                            mintT = Thread(target=mint, args=[wallet])
                             mintT.start()
                             trs.append(mintT)
 
@@ -3867,11 +3842,9 @@ while True:
 
                             break
                         
-                        else:
-                            
-                            DROP_TIME = int(time.time())
+                        DROP_TIME = int(time.time())
 
-            elif mode in [10]:
+            elif mode == 10:
                             
                 bf_launchpad = BifrostLaunchpad(
                     bf_auth=bf_auth_session
@@ -3943,7 +3916,7 @@ while True:
                     
                     for wallet in wallets:
 
-                        mintT = Thread(target=mint, args=[wallet, recent_blockhash])
+                        mintT = Thread(target=mint, args=[wallet])
                         mintT.start()
                         trs.append(mintT)
 
@@ -3972,6 +3945,4 @@ while True:
 
                         break
                     
-                    else:
-                        
-                        DROP_TIME = int(time.time())
+                    DROP_TIME = int(time.time())

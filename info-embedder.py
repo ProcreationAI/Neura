@@ -22,7 +22,6 @@ embed.add_field(name="**Candy Machine v2 minting** :candy:", value=value, inline
 value = """
 - Auto-scheduling
 - Anti-bot bypass
-- Proxy support 
 - Custom wallets, tasks and delay 
 """
 embed.add_field(name="**MagicEden launchpad minting** <:ME_Logo_Gradient:925606536468906015>", value=value, inline=False)
@@ -44,7 +43,7 @@ value = """
 - Filtered sniping (fixed min and max price, floor price %)
 - Add ranks
 - Add attributes 
-- Auto-lister (sniped price %, floor price %, highest trait %)
+- Auto-lister (sniped price %, floor price %)
 - In-time floor monitor
 - Multiple collections
 - Webhook support
