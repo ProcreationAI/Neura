@@ -233,10 +233,8 @@ async def get_program_account_idl(name: str, account: str, prog: str, rpc: str):
 
         return candyMachine
 
-    except Exception as e:
-        
-        print(e)
-                
+    except:
+                        
         if program:
             await program.close()
         if client:

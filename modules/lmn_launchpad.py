@@ -23,7 +23,7 @@ LMN_PROGRAM = "ArAA6CZC123yMJLUe4uisBEgvfuw2WEvex9iFmFCYiXv"
 LMN_TRESAURY = "33nQCgievSd3jJLSWFBefH3BJRN7h6sAoS82VFFdJGF5"
 
 OPTS = TxOpts(skip_preflight=True, skip_confirmation=False, preflight_commitment=Commitment("confirmed"))
-
+    
 class LaunchMyNftLaunchpad():
 
     def __init__(self, privkey: str, rpc: str, cmid: str, candy_machine_meta):
@@ -94,8 +94,8 @@ class LaunchMyNftLaunchpad():
             AccountMeta(pubkey=PublicKey(SYSTEM_CLOCK_PROGRAM),is_signer=False, is_writable=False)
         ]
 
-        price_data = list(int(self.cm_meta.price).to_bytes(8, "little"))
-        main_data = list(bytes.fromhex("d413c38e42cb08de01000000000000000000000000"))
+        price_data = list(int(self.cm_meta.data.price).to_bytes(8, "little"))
+        main_data = list(bytes.fromhex("d413c38e42cb08de0100000000"))
         
         data = main_data + price_data
 

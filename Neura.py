@@ -76,7 +76,7 @@ def get_sol_wallets():
                 tasks = int(tasks) if int(tasks) > 0 else 0
                 address = get_pub_from_priv(privkey)
                 
-                if mode in [1, 2, 7, 9] and tasks:
+                if mode in [1, 2, 7, 9, 10] and tasks:
                         
                     if tasks > max_tasks:
 
