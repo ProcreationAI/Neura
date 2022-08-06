@@ -40,23 +40,25 @@ class SolWalletManager():
 
         transaction = Transaction()
         
-        transaction.add(
-            transfer(
-                TransferParams(
-                    from_pubkey=PublicKey(self.payer.public_key),
-                    to_pubkey=PublicKey(to_address),
-                    lamports=amount
+        try:
+            
+            transaction.add(
+                transfer(
+                    TransferParams(
+                        from_pubkey=PublicKey(self.payer.public_key),
+                        to_pubkey=PublicKey(to_address),
+                        lamports=amount
+                    )
                 )
             )
-        )
-
-        try:
             
             tx_hash = self.client.send_transaction(transaction, self.payer, opts=OPTS)["result"]
                 
             return tx_hash
         
-        except:
+        except Exception as e:
+            
+            print(e)
                         
             return None
         

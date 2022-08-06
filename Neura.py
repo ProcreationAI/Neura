@@ -81,10 +81,6 @@ def get_sol_wallets():
                     if tasks > max_tasks:
 
                         tasks = max_tasks
-
-                    elif tasks < min_tasks:
-                        
-                        tasks = min_tasks
                         
                 if address:
 
@@ -94,7 +90,7 @@ def get_sol_wallets():
                             "name": name.upper(),
                             "address": address,
                             "privkey": privkey,
-                            "tasks": int(tasks)
+                            "tasks": tasks
                         }
 
                     )
@@ -1481,7 +1477,7 @@ def get_drop_time():
 
         meta = asyncio.run(get_program_account_idl("CandyMachine", CM, PROGRAM, sol_rpc))
 
-        return int(meta.data.go_live_date)
+        return int(meta.data.go_live_date) if meta else None
 
     elif PROGRAM in [SolanaPrograms.ME_PROGRAM, SolanaPrograms.BF_PROGRAM]:
         
@@ -1762,8 +1758,7 @@ def get_balance_to_transfer(wallet: int):
 
         try:
 
-            balance = console.input(
-                f"[purple] >>[/] Select an amount to transfer from wallet {i}: ")
+            balance = console.input(f"[purple] >>[/] Select an amount to transfer from wallet {i}: ")
 
             if balance == "e":
 
@@ -1779,7 +1774,7 @@ def get_balance_to_transfer(wallet: int):
 
             else:
 
-                return wallet_balance - 50000
+                return wallet_balance - 2042320
 
         except:
             
@@ -2065,10 +2060,9 @@ while True:
     advanced_mode = get_config(parameter="advanced")
     await_mints = get_config(parameter="await_mints")
     success_webhook = get_config(parameter="webhook")
-    dc_auth_token = get_config("discord")
+    dc_auth_token = get_config(parameter="discord")
     
     max_tasks = 1000
-    min_tasks = 500
     
     valid_sol_rpc = validate_sol_rpc(rpc=sol_rpc)
     
@@ -2545,11 +2539,28 @@ while True:
 
                                 if nft.get("collectionName") or nft["onChainCollection"].get("key") or operation_type == "b":
                                     
-                                    nfts_data.append({"mint": nft["mintAddress"], "name": nft["title"], "token": nft["id"], "symbol": nft.get("collectionName") or nft["onChainCollection"].get("key"), "attributes": nft["attributes"]})
+                                    nfts_data.append(
+                                        {
+                                            "mint": nft["mintAddress"],
+                                            "name": nft["title"], 
+                                            "token": nft["id"],
+                                            "symbol": nft.get("collectionName") or nft["onChainCollection"].get("key"),
+                                            "attributes": nft["attributes"]
+                                        }
+                                    )                                    
 
                             elif operation_type in ["d", "u"]:
 
-                                nfts_data.append({"mint": nft["initializerDepositTokenMintAddress"], "name": nft["title"], "token": nft["initializerDepositTokenAccount"], "price": lamports_to_sol(nft["takerAmount"]), "attributes": nft["attributes"], "symbol": nft.get("collectionSymbol") or nft.get("onChainCollectionAddress")})
+                                nfts_data.append(
+                                    {
+                                        "mint": nft["initializerDepositTokenMintAddress"],
+                                        "name": nft["title"], 
+                                        "token": nft["initializerDepositTokenAccount"],
+                                        "symbol": nft.get("collectionSymbol") or nft.get("onChainCollectionAddress"),
+                                        "price": lamports_to_sol(nft["takerAmount"]), 
+                                        "attributes": nft["attributes"] 
+                                    }
+                                )
                             
                         sorted_names = sorted([nft["name"] for nft in nfts_data])
 

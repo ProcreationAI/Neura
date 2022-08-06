@@ -1,5 +1,4 @@
 """Provides the `AccountClient` class."""
-"""Modified by me so custom programs IDL's could be fetched"""
 
 import base64
 from dataclasses import dataclass
