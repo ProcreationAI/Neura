@@ -10,3 +10,4 @@ from .coral_cube import CoralCube
 from .ml_launchpad import MonkeLabsLaunchpad
 from .wallet_manager import SolWalletManager
 from .bifrost import BifrostAuth, BifrostLaunchpad
+from .exchange_art import ExchangeArt

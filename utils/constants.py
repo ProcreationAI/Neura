@@ -37,4 +37,5 @@ class SolanaPrograms():
     LMN_PROGRAM = "ArAA6CZC123yMJLUe4uisBEgvfuw2WEvex9iFmFCYiXv"
     ML_PROGRAM = "minwAEdewYNqagUwzrVBUGWuo277eeSMwEwj76agxYd"
     BF_PROGRAM = "BFCMkgg9eFSv54HKJZFD5RMG8kNR5eMAEWnAtfRTPCjU"
+    EA_PROGRAM = ""
     

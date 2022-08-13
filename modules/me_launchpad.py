@@ -155,10 +155,10 @@ class MagicEdenLaunchpad():
                 'needsNotary': True,
             },
             'accounts': {
-                'config': str(self.cm_meta.config_addres),
+                'config': str(self.cm_meta.config),
                 'candyMachine': str(self.cmid),
                 'launchStagesInfo': str(self.LAUNCH_STAGES_ADDRESS[0]),
-                'candyMachineWalletAuthority': str(self.cm_meta.wallet_auth),
+                'candyMachineWalletAuthority': str(self.cm_meta.wallet_authority),
                 'mintReceiver': str(self.payer.public_key),
                 'payer': str(self.payer.public_key),
                 'payTo': str(self.pay_to_ata),
@@ -178,7 +178,7 @@ class MagicEdenLaunchpad():
                 'associatedTokenProgram': ASSOCIATED_TOKEN_ID,
             },
         }
-        
+
         payload = create_tls_payload(
             url="https://wk-notary-prod.magiceden.io/mintix",
             method="POST",
@@ -194,7 +194,7 @@ class MagicEdenLaunchpad():
         self.mint_account = Keypair.generate()
 
         self.associated_token_account = get_associated_token_address(self.payer.public_key, self.mint_account.public_key)
-        self.pay_to_ata = get_associated_token_address(self.wallet_auth, PublicKey(WRAPPED_SOL))
+        self.pay_to_ata = get_associated_token_address(self.cm_meta.wallet_authority, PublicKey(WRAPPED_SOL))
         
         self.METADATA_PROGRAM_ADDRESS = PublicKey.find_program_address(
             
@@ -206,7 +206,6 @@ class MagicEdenLaunchpad():
 
             program_id= PublicKey(METADATA_PROGRAM_ID)
         )
-
 
         self.EDITION_PROGRAM_ADDRESS = PublicKey.find_program_address(
             
@@ -220,7 +219,6 @@ class MagicEdenLaunchpad():
             program_id= PublicKey(METADATA_PROGRAM_ID)
         )
 
-
         self.WALLET_LIMIT_ADDRESS = PublicKey.find_program_address(
             seeds=[
                 'wallet_limit'.encode('utf-8'),
@@ -230,7 +228,6 @@ class MagicEdenLaunchpad():
 
             program_id= PublicKey(ME_PROGRAM)
         )
-
 
         self.LAUNCH_STAGES_ADDRESS = PublicKey.find_program_address(
             seeds=[

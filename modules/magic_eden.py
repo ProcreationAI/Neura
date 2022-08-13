@@ -204,7 +204,7 @@ class MagicEden():
                 headers=headers
             )
 
-            res = requests.post("http://127.0.0.1:3000", json=payload, timeout=5).json()
+            res = requests.post("http://127.0.0.1:3000", json=payload, timeout=20).json()
 
             return json.loads(res["body"])["results"]
 
@@ -241,7 +241,7 @@ class MagicEden():
                 headers=headers
             )
 
-            res = requests.post("http://127.0.0.1:3000", json=payload, timeout=10)
+            res = requests.post("http://127.0.0.1:3000", json=payload, timeout=20)
 
             return json.loads(res.json()["body"])["results"]
 

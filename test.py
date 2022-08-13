@@ -257,15 +257,19 @@ def send_sniper_webhook(mint: str, tx: str, price: float, sniping_time: float, w
 
 
 sol_rpc = "https://thrumming-damp-shadow.solana-mainnet.quiknode.pro/362bbea5917e5ec837d4e76ffe9aafcc1d22a44c/"
-sol_rpc = "http://142.132.134.62:8899/"
+#sol_rpc = "http://rpc.acidnode.io/"
 
 client = Client(sol_rpc)
 
-me = MagicEden.get_wallet_nfts("3VDvJzaDaTuja6n8PvQCvSmCrEbXaB7fP9zLP197T1A7")
+# 28uSJ1FwmjjqJRCGRY4b3zW6NFfChoMqEfrai7sKDHPz
 
-print(json.dumps(me, indent=3))
+a = client.get_transaction("3Yp83HexYohMJoZsY1pRz6fcTH8WrPesfsYNNzEdEMawRvRPxY3VmGmeLPYgsN2mWhBFZTFiSPUtuW88kZgkUcQY")
 
-""" i = 10
+print(json.dumps(a, indent=3))
+
+exit()
+
+i = 10
 until_tx = None
 recent_txs = []
 
@@ -294,4 +298,4 @@ while i:
         until_tx = last_txs[0]["signature"]
         i -= 1
 
-        print("="*50) """
+        print("="*50)

@@ -16,7 +16,6 @@ from lib.idl import AccountClient
 
 def get_wallet_nfts(wallet: str, rpc: str):
 
-
     client = Client(rpc)
     
     try:
@@ -31,7 +30,7 @@ def get_wallet_nfts(wallet: str, rpc: str):
 
             nft_data = nft["account"]["data"]["parsed"]["info"]
 
-            if int(nft_data["tokenAmount"]["amount"]) > 0:
+            if int(nft_data["tokenAmount"]["amount"]) == 1:
 
                 holded_nfts.append(nft_data["mint"])
 
@@ -190,8 +189,7 @@ def get_nft_metadata(mint_key: str, rpc: str):
         
         metadata_account = _get_metadata_account(mint_key)
 
-        data = base64.b64decode(client.get_account_info(
-            metadata_account)['result']['value']['data'][0])
+        data = base64.b64decode(client.get_account_info(metadata_account)['result']['value']['data'][0])
 
         metadata = _unpack_metadata_account(data)
 

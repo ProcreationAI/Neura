@@ -49,7 +49,7 @@ class CandyMachinev2():
         self.transaction = Transaction()
 
         mint_account = Keypair.generate()
-        associated_token_account = get_associated_token_address(owner=self.payer.public_key, mint=mint_account.public_key)
+        payer_ata = get_associated_token_address(owner=self.payer.public_key, mint=mint_account.public_key)
 
         cm_wallet = self.cm_meta.wallet
         cm_auth = self.cm_meta.authority
@@ -118,7 +118,7 @@ class CandyMachinev2():
                 MintToParams(
                     program_id=PublicKey(TOKEN_PROGRAM_ID),
                     mint=mint_account.public_key,
-                    dest=associated_token_account,
+                    dest=payer_ata,
                     mint_authority=self.payer.public_key,
                     amount=1
                 )

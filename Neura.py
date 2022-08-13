@@ -35,7 +35,8 @@ from modules import (
     MonkeLabsLaunchpad,
     SolWalletManager,
     BifrostAuth,
-    BifrostLaunchpad
+    BifrostLaunchpad,
+    ExchangeArt
 )
 
 from utils.constants import Bot, Discord, SolanaPrograms, SolanaEndpoints, Keys
@@ -168,7 +169,7 @@ def mint(wallet: dict):
                 args=[privkey, sol_rpc, max_price, status],
                 daemon=True
             )
-            
+        
         createtxT.start()
         trs.append(createtxT)
     
@@ -329,7 +330,7 @@ def send_me_tx(privkey: str, rpc: str, blockhash: Blockhash, status: str):
         launchpad.find_transaction_accounts()
     
     except:
-        
+                
         console.print(logger(f"{status} [red]Error while creating tx (node)[/]\n"), end="")
         
         return
@@ -417,6 +418,56 @@ def send_bf_tx(privkey: str, rpc: str, max_price: float, status: str):
         console.print(logger(f"{status} [red]Error while sending tx[/]\n"), end="")
         
 
+def send_ea_tx(privkey: str, rpc: str, blockhash: Blockhash, edition_no: int, status: str):
+
+    exchange = ExchangeArt(
+        privkey=privkey,
+        rpc=rpc,
+        contract=collection
+    )
+    
+    mint_info = exchange.get_hmac_code()
+    
+    if mint_info:
+            
+        timestamp = mint_info["timestamp"]
+        hmac_code = mint_info["hmacCode"]
+
+        try:
+            
+            exchange.create_transaction(timestamp, hmac_code, edition_no)
+            
+            exchange.transaction.recent_blockhash = blockhash
+        
+        except:
+                        
+            console.print(logger(f"{status} [red]Error while creating tx (node)[/]\n"), end="")
+            
+            return
+
+        console.print(logger(f"{status} [yellow]Sending transaction[/]\n"), end="")
+        
+        tx = exchange.send_transaction()
+        
+        if tx:
+
+            console.print(logger(f"{status} [green]Mint successful with hash: {tx}[/]\n"), end="")
+            
+            return
+
+        elif tx is None:
+
+            console.print(logger(f"{status} [red]Unable to confirm tx[/]\n"), end="")
+            
+        elif tx is False:
+
+            console.print(logger(f"{status} [red]Error while sending tx[/]\n"), end="")
+    else:
+        
+        console.print(logger(f"{status} [red]Error while getting mint info[/]\n"), end="")
+    
+    
+        
 def send_sniper_webhook(mint: str, tx: str, price: float, webhook: str):
     
     nft_data = MagicEden.get_nft_data(mint=mint)
@@ -1488,12 +1539,18 @@ def get_drop_time():
         elif PROGRAM == SolanaPrograms.BF_PROGRAM:
             
             collection = BifrostLaunchpad.get_collection_info(collection_url)
-            
+        
         return collection["date"] if collection else None
 
     elif PROGRAM == SolanaPrograms.ML_PROGRAM:
         
         return int(CM["REACT_APP_CANDY_START_DATE"])
+    
+    elif PROGRAM == SolanaPrograms.EA_PROGRAM:
+        
+        collection = ExchangeArt.get_collection_info(collection_url)
+
+        return collection["contractGroups"][0]["availableContracts"]["editionSales"][0]["data"]["start"] if collection else None
     
 
 def validate_sol_rpc(rpc: str):
@@ -1542,46 +1599,7 @@ def wait_for_drop(exit_before: int = 0):
                 show_new_time = datetime.fromtimestamp(DROP_TIME).strftime("%H:%M:%S")
                 
                 console.print(logger(f"[BOT] [yellow]Found time reschedule to {show_new_time}[/]\n"), end="")
-
-
-
-def wait_for_mints():
-        
-    while True:
-        
-        current_minted = None
-        
-        if mode in [1,2,7]:
                 
-            metadata = asyncio.run(get_program_account_idl("CandyMachine", CM, PROGRAM, sol_rpc))   
-            
-            if metadata:
-                
-                if PROGRAM in [SolanaPrograms.CMV2_PROGRAM, SolanaPrograms.LMN_PROGRAM]:
-                    
-                    current_minted = metadata.items_redeemed
-                    
-                elif PROGRAM == SolanaPrograms.ME_PROGRAM:
-                    
-                    current_minted = metadata.items_redeemed_normal
-                
-        elif mode == 9:
-            
-            current_minted = get_ml_items_redeemed(index_key=CM["REACT_APP_INDEX_KEY"])
-        
-        elif mode == 10:
-            
-            cm_state = bf_launchpad.get_cm_state(CM)
-            
-            if cm_state:
-                
-                current_minted = cm_state["itemsRedeemed"]
-                
-        if current_minted and current_minted >= await_mints:
-                    
-            break
-        
-        time.sleep(1)
     
 def create_table_wallets(wallets: list):
 
@@ -1636,8 +1654,17 @@ def get_cm_mints_status(cm: str | dict, program: str):
         
         available = int(cm["REACT_APP_INDEX_CAP"])
         redeemed = get_ml_items_redeemed(index_key=cm["REACT_APP_INDEX_KEY"])
+    
+    elif program == SolanaPrograms.EA_PROGRAM:
         
-    if available and redeemed:
+        collection = ExchangeArt.get_collection_info(collection_url)
+        
+        if collection:
+            
+            redeemed = collection["contractGroups"][0]["mint"]["masterEditionAccount"]["currentSupply"]
+            available = collection["contractGroups"][0]["mint"]["masterEditionAccount"]["maxSupply"]
+            
+    if available is not None and redeemed is not None:
             
         minted = int((redeemed/available) * 100)
 
@@ -1905,7 +1932,7 @@ def check_node_health():
 
 def get_module():
 
-    options = list(range(1, 10)) + [11]
+    options = list(range(1, 10)) + [11, 12]
 
     while True:
 
@@ -2100,7 +2127,8 @@ while True:
     console.print("[cyan] [8][/] CoralCube sniper")
     console.print("[cyan] [9][/] MonkeLabs mint")
     console.print("[cyan] [10][/] Soon...")
-    console.print("[cyan] [11][/] Node health checker\n")
+    console.print("[cyan] [11][/] ExchangeArt mint")
+    console.print("[cyan] [12][/] Node health checker\n")
     
     mode = get_module()
 
@@ -2149,7 +2177,7 @@ while True:
                     console.print(create_table_wallets(wallets))
                     print()
 
-                    collection_url = str(console.input("[purple] >>[/] MagicEden launchpad collection URL: ")).lower()
+                    collection_url = str(console.input("[purple] >>[/] MagicEden collection URL: ")).lower()
                     clear()
 
                     if collection_url == "e":
@@ -2358,21 +2386,17 @@ while True:
                                                 
                                                     if matching_listing:
                                                         
-                                                        valid_listing = False
+                                                        valid_listing = None
                                                         
                                                         if min_sol is not None and max_sol is not None:
                                                             
-                                                            if min_sol <= price_in_sol <= max_sol:
-                                                                
-                                                                valid_listing = True
-                                                                                                                        
-                                                        elif under_floor is not None and collection_floor is not None:
+                                                            valid_listing = min_sol <= price_in_sol <= max_sol
+                                                                             
+                                                        if (valid_listing or valid_listing is None) and under_floor is not None and collection_floor is not None:
                                                             
                                                             max_possible_price = collection_floor - (collection_floor * (under_floor/100))
-                                                            
-                                                            if price_in_sol <= max_possible_price:
                                                                 
-                                                                valid_listing = True
+                                                            valid_listing = price_in_sol <= max_possible_price
                                                                 
                                                         if valid_listing:
                                                                                                                         
@@ -3463,22 +3487,18 @@ while True:
                                                 
                                                     if matching_listing:
                                                         
-                                                        valid_listing = False
+                                                        valid_listing = None
                                                         
                                                         if min_sol is not None and max_sol is not None:
                                                             
-                                                            if min_sol <= price_in_sol <= max_sol:
-                                                                
-                                                                valid_listing = True
-                                                                                                                        
-                                                        elif under_floor is not None and collection_floor is not None:
+                                                            valid_listing = min_sol <= price_in_sol <= max_sol
+                                                                             
+                                                        if (valid_listing or valid_listing is None) and under_floor is not None and collection_floor is not None:
                                                             
                                                             max_possible_price = collection_floor - (collection_floor * (under_floor/100))
+                                                                
+                                                            valid_listing = price_in_sol <= max_possible_price
                                                             
-                                                            if price_in_sol <= max_possible_price:
-                                                                
-                                                                valid_listing = True
-                                                                
                                                         if valid_listing:
                                                                                                                         
                                                             console.print(logger(f"{status} [yellow]Found possible NFT[/] [purple]>[/] [yellow]{nft_name}[/]"))
@@ -3624,7 +3644,7 @@ while True:
                 console.print(create_table_wallets(wallets))
                 print()
 
-                collection_url = str(console.input("[purple] >>[/] Bifrost launchpad collection URL: ")).lower()
+                collection_url = str(console.input("[purple] >>[/] Bifrost collection URL: ")).lower()
                 clear()
 
                 if collection_url == "e":
@@ -3678,6 +3698,64 @@ while True:
                     console.print("[yellow] ERROR![/] [red]Collection not found\n [/]")
         
         if mode == 11:
+            
+            while True:
+                
+                if helheim_auth:
+                        
+                    console.print(create_table_wallets(wallets))
+                    print()
+
+                    collection_url = str(console.input("[purple] >>[/] ExchangeArt collection URL: "))
+                    clear()
+
+                    if collection_url == "e":
+                        menu = True
+                        break
+
+                    with console.status("[yellow]Searching for collection[/]", spinner="bouncingBar", speed=1.5):
+
+                        collection = ExchangeArt.get_collection_info(collection_url)
+
+                    if collection:
+                        
+                        contract = collection["contractGroups"][0]
+                        
+                        CM = contract["availableContracts"]["editionSales"][0]["keys"]["mintKey"]
+                        PROGRAM = SolanaPrograms.EA_PROGRAM
+                        DROP_TIME = contract["availableContracts"]["editionSales"][0]["data"]["start"]
+                        
+                        info_to_show = {
+                            "name": contract["mint"]["name"],
+                            "price": contract["availableContracts"]["editionSales"][0]["data"]["price"],
+                            "supply": contract["mint"]["masterEditionAccount"]["maxSupply"],
+                            "cmid": CM,
+                            "date": DROP_TIME
+                        }
+                        
+                        console.print(create_table_launchpad(info_to_show))
+                        print()
+
+                        proceed = Prompt.ask("[purple] >>[/] Start mint?", choices=["y", "n"])
+                        clear()
+
+                        if proceed == "y":
+
+                            break
+
+                    else:
+                        
+                        console.print("[yellow] ERROR![/] [red]Collection not found\n [/]")
+                        
+                else:
+                    
+                    console.input("[yellow] ERROR![/] [red]MagicEden launchpad unavailable [/]", password=True)
+                    
+                    menu = True
+                    
+                    break
+        
+        if mode == 12:
             
             if not valid_sol_rpc:
 
@@ -3797,12 +3875,6 @@ while True:
                             console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for drop time[/]\n".format("ALL", "INIT", show_drop_time)), end="")
 
                             wait_for_drop(exit_before=3)
-                        
-                        elif await_mints:
-                            
-                            console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for mints[/]\n".format("ALL", "INIT", show_drop_time)), end="")
-                            
-                            wait_for_mints()
                             
                         while True:
 
@@ -3892,12 +3964,6 @@ while True:
                         console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for drop time[/]\n".format("ALL", "INIT", show_drop_time)), end="")
 
                         wait_for_drop(exit_before=3)
-                    
-                    elif await_mints:
-                        
-                        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for mints[/]\n".format("ALL", "INIT", show_drop_time)), end="")
-                        
-                        wait_for_mints()
                         
                     while True:
                         
@@ -3957,3 +4023,94 @@ while True:
                         break
                     
                     DROP_TIME = int(time.time())
+                    
+                    
+            elif mode == 11:
+                
+
+                if user_time:
+
+                    DROP_TIME = user_time
+
+                show_drop_time = datetime.fromtimestamp(DROP_TIME).strftime("%H:%M:%S")
+                
+                console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Initialazing mint[/]\n".format("ALL", "INIT", show_drop_time)), end="")
+
+                if user_time:
+
+                    console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for drop time[/]\n".format("ALL", "INIT", show_drop_time)), end="")
+
+                    wait_for_drop()
+                
+                timeout = time.time() + 30
+                last_edition = None
+                
+                trs = []
+                i = 0
+                
+                show_drop_time = datetime.fromtimestamp(DROP_TIME).strftime("%H:%M:%S")
+
+                while time.time() < timeout:
+                    
+                    supply = ExchangeArt.get_collection_supply(CM, sol_rpc)
+                    
+                    if supply:
+                        
+                        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for new edition[/]\n".format("ALL", "FETCH", show_drop_time)), end="")
+
+                        minted, available = supply
+                        
+                        if minted != last_edition:
+                            
+                            blockhash = get_blockhash(sol_rpc)
+                            
+                            for wallet in wallets:
+                                
+                                name = wallet["name"]
+                                tasks = wallet["tasks"]
+                                privkey = wallet["privkey"]
+                                
+                                status = "[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/]".format(name, f"{i + 1}/???", show_drop_time)
+
+                                if tasks:
+                                        
+                                    mintT = Thread(target=send_ea_tx, args=[privkey, sol_rpc, blockhash, minted, status])
+                                    mintT.start()
+                                    trs.append(mintT)
+                            
+                            last_edition = minted
+                            
+                            i += 1
+                    
+                    else:
+                        
+                        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [red]Error fetching new editions[/]\n".format("ALL", "FETCH", show_drop_time)), end="")
+
+                    time.sleep(0.3)
+                    
+                for tr in trs:
+                    tr.join()
+
+                print()
+                
+                mints_status = get_cm_mints_status(CM, PROGRAM)
+                
+                if mints_status:
+                        
+                    available, redeemed, minted = mints_status
+                    
+                    console.print(f"[AVAILABLE ~ [green]{available}[/]] [REDEEMED ~ [yellow]{redeemed}[/]] [MINTED ~ [cyan]{minted}%[/]]\n")
+                    
+                print("\n")
+
+                status = Prompt.ask("[purple]>>[/] Insert 'e' to exit or 'r' to retry mint", choices=["e", "r"])
+
+                print("\n")
+
+                if status == "e":
+
+                    menu = True
+
+                    break
+                
+                DROP_TIME = int(time.time())
