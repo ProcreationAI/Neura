@@ -254,7 +254,7 @@ class MagicEden():
 
         try:
                         
-            tx = self.client.get_transaction(tx_sig=tx, commitment=Commitment("confirmed"))["result"]
+            tx = self.client.get_transaction(tx_sig=tx, commitment=Commitment("processed"))["result"]
 
             logs = "".join(tx["meta"]["logMessages"])
             accounts = tx["transaction"]["message"]["accountKeys"]
@@ -278,7 +278,7 @@ class MagicEden():
                 }
                 
         except:
-            
+                        
             pass
         
         return None

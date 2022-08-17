@@ -38,7 +38,7 @@ def get_config(parameter: str):
 
             return value if value > int(datetime.now().timestamp()) else int(datetime.now().timestamp())
 
-        elif parameter in ["sol_rpc", "eth_rpc"]:
+        elif parameter in ["mint_rpc", "snipe_rpc"]:
 
             return value
 

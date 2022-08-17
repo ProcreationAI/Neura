@@ -18,7 +18,6 @@ from solana.system_program import TransferParams, transfer
 from solana.blockhash import Blockhash
 from solana.rpc.commitment import Commitment
 from anchorpy import Program, Wallet, Provider
-from web3 import Web3
 from solana.rpc.async_api import AsyncClient
 import base64
 from spl.token.instructions import InitializeMintParams, MintToParams, create_associated_token_account, get_associated_token_address, initialize_mint, mint_to, initialize_account, InitializeAccountParams
@@ -257,17 +256,15 @@ def send_sniper_webhook(mint: str, tx: str, price: float, sniping_time: float, w
 
 
 sol_rpc = "https://thrumming-damp-shadow.solana-mainnet.quiknode.pro/362bbea5917e5ec837d4e76ffe9aafcc1d22a44c/"
-#sol_rpc = "http://rpc.acidnode.io/"
+sol_rpc = "https://snipe.acidnode.io/"
 
 client = Client(sol_rpc)
 
-# 28uSJ1FwmjjqJRCGRY4b3zW6NFfChoMqEfrai7sKDHPz
-
-a = client.get_transaction("3Yp83HexYohMJoZsY1pRz6fcTH8WrPesfsYNNzEdEMawRvRPxY3VmGmeLPYgsN2mWhBFZTFiSPUtuW88kZgkUcQY")
+""" a = client.get_signatures_for_address("ArAA6CZC123yMJLUe4uisBEgvfuw2WEvex9iFmFCYiXv", limit=10, commitment=Commitment("processed"))
 
 print(json.dumps(a, indent=3))
 
-exit()
+exit() """
 
 i = 10
 until_tx = None
@@ -276,8 +273,8 @@ recent_txs = []
 while i:
     
     last_txs = get_account_last_txs(
-        account="hausS13jsjafwWwGqZTUQRmWyvyxn9EQpqMwV1PBBmk", 
-        limit=10, 
+        account="M2mx93ekt1fmXSVkTrUL9xVFHkmME8HTUi5Cyc5aF7K", 
+        limit=5, 
         commitment="confirmed",
         until=until_tx
     )

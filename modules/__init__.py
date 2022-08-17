@@ -1,5 +1,4 @@
 from .candy_machine import CandyMachinev2
-from .eth_contract import EthContract
 from .famous_fox import FamousFox
 from .lmn_launchpad import LaunchMyNftLaunchpad
 from .me_launchpad import MagicEdenLaunchpad

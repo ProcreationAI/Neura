@@ -134,7 +134,7 @@ def mint(wallet: dict):
 
             createtxT = Thread(
                 target=send_cmv2_tx,
-                args=[privkey, sol_rpc, recent_blockhash, status],
+                args=[privkey, mint_rpc, recent_blockhash, status],
                 daemon=True
             )
 
@@ -142,7 +142,7 @@ def mint(wallet: dict):
 
             createtxT = Thread(
                 target=send_me_tx,
-                args=[privkey, sol_rpc, recent_blockhash, status],
+                args=[privkey, mint_rpc, recent_blockhash, status],
                 daemon=True
             )
 
@@ -150,7 +150,7 @@ def mint(wallet: dict):
             
             createtxT = Thread(
                 target=send_lmn_tx,
-                args=[privkey, sol_rpc, recent_blockhash, status],
+                args=[privkey, mint_rpc, recent_blockhash, status],
                 daemon=True
             )
 
@@ -158,7 +158,7 @@ def mint(wallet: dict):
             
             createtxT = Thread(
                 target=send_ml_tx,
-                args=[privkey, sol_rpc, recent_blockhash, status],
+                args=[privkey, mint_rpc, recent_blockhash, status],
                 daemon=True
             )
         
@@ -166,7 +166,7 @@ def mint(wallet: dict):
             
             createtxT = Thread(
                 target=send_bf_tx,
-                args=[privkey, sol_rpc, max_price, status],
+                args=[privkey, mint_rpc, max_price, status],
                 daemon=True
             )
         
@@ -512,7 +512,7 @@ def check_cmid(cmid: str):
     
     try:
         
-        client = Client(sol_rpc)
+        client = Client(mint_rpc)
         
         res = client.get_account_info(pubkey=cmid)
 
@@ -733,7 +733,7 @@ def get_ml_candy_machine(url: str):
                         
                         config_key = accs["REACT_APP_CONFIG_KEY"]
                         
-                        client = Client(sol_rpc)
+                        client = Client(mint_rpc)
                         
                         res = client.get_account_info(config_key)
 
@@ -977,7 +977,7 @@ def check_spl_token(token_mint: str):
     
     try:
         
-        client = Client(sol_rpc)
+        client = Client(SolanaEndpoints.MAINNET_RPC)
         
         return client.get_token_supply(token_mint).get("result")
     
@@ -1005,7 +1005,7 @@ def get_me_collection_metadata(symbol: str):
         
         mint = last_listed["mintAddress"]
         
-        nft_metadata = get_nft_metadata(mint_key=mint, rpc=sol_rpc)
+        nft_metadata = get_nft_metadata(mint_key=mint, rpc=mint_rpc)
         
         if nft_metadata:
             
@@ -1041,7 +1041,7 @@ def get_cc_collection_metadata(symbol: str):
         
         mint = last_listed["mint"]
         
-        nft_metadata = get_nft_metadata(mint_key=mint, rpc=sol_rpc)
+        nft_metadata = get_nft_metadata(mint_key=mint, rpc=mint_rpc)
         
         if nft_metadata:
             
@@ -1526,7 +1526,7 @@ def get_drop_time():
 
     if PROGRAM in [SolanaPrograms.CMV2_PROGRAM, SolanaPrograms.LMN_PROGRAM]:
 
-        meta = asyncio.run(get_program_account_idl("CandyMachine", CM, PROGRAM, sol_rpc))
+        meta = asyncio.run(get_program_account_idl("CandyMachine", CM, PROGRAM, SolanaEndpoints.MAINNET_RPC))
 
         return int(meta.data.go_live_date) if meta else None
 
@@ -1569,6 +1569,7 @@ def validate_sol_rpc(rpc: str):
 
         res = requests.post(rpc, headers=headers, json=json_data, timeout=2)
 
+        
         return int(res.elapsed.total_seconds()*1000)
 
     except:
@@ -1613,7 +1614,7 @@ def create_table_wallets(wallets: list):
         
         for wallet in wallets:
 
-            balance = get_wallet_balance(wallet["address"], sol_rpc)
+            balance = get_wallet_balance(wallet["address"], mint_rpc)
 
             table.add_row(wallet["name"], wallet["address"], str(wallet["tasks"]), str(round(lamports_to_sol(balance), 2)))
 
@@ -1630,7 +1631,7 @@ def get_cm_mints_status(cm: str | dict, program: str):
             "CandyMachine",
             account=cm,
             prog=program,
-            rpc=sol_rpc
+            rpc=SolanaEndpoints.MAINNET_RPC
         ))
 
         if metadata:
@@ -1910,7 +1911,7 @@ def check_node_health():
         
     try:
         
-        client = Client(sol_rpc)
+        client = Client(mint_rpc)
         
         chain_client = Client(SolanaEndpoints.MAINNET_RPC)
         
@@ -2082,7 +2083,8 @@ while True:
     
     clear(newline=False)
 
-    sol_rpc = get_config(parameter="sol_rpc")
+    mint_rpc = get_config(parameter="mint_rpc")
+    snipe_rpc = get_config(parameter="snipe_rpc")
     user_time = get_config(parameter="time")
     advanced_mode = get_config(parameter="advanced")
     await_mints = get_config(parameter="await_mints")
@@ -2091,29 +2093,38 @@ while True:
     
     max_tasks = 1000
     
-    valid_sol_rpc = validate_sol_rpc(rpc=sol_rpc)
+    valid_mint_rpc = validate_sol_rpc(rpc=mint_rpc)
+    valid_snipe_rpc = validate_sol_rpc(rpc=snipe_rpc)
     
     menu = False
 
     show_banner()
 
-    if sol_rpc and valid_sol_rpc:
+    if mint_rpc and valid_mint_rpc:
 
-        console.print(" {:<10} [green]{:<5}[/] [purple]> [/]{}".format("SOL RPC:", "ON", f"{sol_rpc} [purple]>[/] {valid_sol_rpc} ms"))
+        console.print(" {:<12} [green]{:<6}[/] [purple]> [/]{}".format("Mint RPC", "ON", f"{mint_rpc} [purple]>[/] {valid_mint_rpc} ms"))
 
     else:
 
-        console.print(" {:<10} [red]OFF[/]".format("SOL RPC:"))
+        console.print(" {:<12} [red]OFF[/]".format("Mint RPC"))
 
+    if snipe_rpc and valid_snipe_rpc:
+
+        console.print(" {:<12} [green]{:<6}[/] [purple]> [/]{}".format("Snipe RPC", "ON", f"{snipe_rpc} [purple]>[/] {valid_snipe_rpc} ms"))
+
+    else:
+
+        console.print(" {:<12} [red]OFF[/]".format("Snipe RPC"))
+        
     if user_time:
 
         show_user_time = datetime.fromtimestamp(user_time).strftime("%H:%M:%S")
         
-        console.print(" {:<10} [green]{:<5}[/] [purple]> [/]{}".format("Time:", "ON", show_user_time))
+        console.print(" {:<12} [green]{:<6}[/] [purple]> [/]{}".format("Time", "ON", show_user_time))
 
     else:
 
-        console.print(" {:<10} [red]OFF[/]".format("Time:"))
+        console.print(" {:<12} [red]OFF[/]".format("Time"))
     
     print()
 
@@ -2148,7 +2159,7 @@ while True:
 
             break
 
-        if not valid_sol_rpc:
+        if not valid_snipe_rpc or not valid_mint_rpc:
 
             console.input("[yellow] ERROR![/] [red]Invalid or unreachable RPC [/]", password=True)
 
@@ -2273,7 +2284,7 @@ while True:
                 monitorCollectionsFloorT.start()
                 
                 magic_eden = MagicEden(
-                    rpc=sol_rpc,
+                    rpc=snipe_rpc,
                     privkey=privkey,
                 )
                 
@@ -2318,7 +2329,7 @@ while True:
                             status = f"[SNIPER] [cyan][COLLECTIONS ~ {len(loaded_collections)}][/]"
                             
                             last_txs = get_last_account_txs(
-                                rpc=sol_rpc,
+                                rpc=snipe_rpc,
                                 account="1BWutmTvYPwDtmw9abTkS4Ssr8no61spGAvW1X6NDix", 
                                 limit=10, 
                                 commitment="confirmed",
@@ -2349,7 +2360,7 @@ while True:
                                             price_in_lamports = listing_info["price"]
                                             escrow_pubkey = listing_info["escrow"]
                                             
-                                            nft_metadata = get_nft_metadata(mint_key=mint_address, rpc=sol_rpc)
+                                            nft_metadata = get_nft_metadata(mint_key=mint_address, rpc=mint_rpc)
                                             
                                             if nft_metadata:
                                                 
@@ -2357,7 +2368,7 @@ while True:
                                                 nft_creators = nft_metadata["data"]["creators"]
                                                 nft_update_auth = nft_metadata["update_authority"]
                                                 nft_uri = nft_metadata["data"]["uri"]
-                                                
+
                                                 to_match_identifier = "".join(nft_creators + [nft_update_auth])
                                                 
                                                 if to_match_identifier in loaded_collections.keys():
@@ -2553,7 +2564,7 @@ while True:
                             
                             break
                         
-                        balance = get_wallet_balance(wallet["address"], sol_rpc)
+                        balance = get_wallet_balance(wallet["address"], mint_rpc)
 
                         nfts_data = []
 
@@ -2732,12 +2743,12 @@ while True:
                     privkey = wallets_nfts[wallet]["privkey"]
 
                     me_manager = MagicEden(
-                        rpc=sol_rpc,
+                        rpc=mint_rpc,
                         privkey=privkey
                     )
                     
                     wallet_manager = SolWalletManager(
-                        rpc=sol_rpc,
+                        rpc=mint_rpc,
                         privkey=privkey
                     )
                     
@@ -2871,7 +2882,7 @@ while True:
                     privkey = wallets_nfts[wallet]["privkey"]
 
                     wallet_manager = SolWalletManager(
-                        rpc=sol_rpc,
+                        rpc=mint_rpc,
                         privkey=privkey
                     )
                     
@@ -3079,7 +3090,7 @@ while True:
                         console.print(logger(f"{status} [yellow]Found {len(valid_nfts)} NFT's[/] [purple]>[/] [cyan]{total_spent} SOL[/]"))
                         
                         sniper = MagicEden(
-                            rpc=sol_rpc,
+                            rpc=snipe_rpc,
                             privkey=privkey
                         )
                         
@@ -3196,7 +3207,7 @@ while True:
                         monitorSniperFileT.start()
                         
                         famous_fox = FamousFox(
-                            rpc=sol_rpc,
+                            rpc=snipe_rpc,
                             privkey=privkey,
                         )
                         
@@ -3218,7 +3229,7 @@ while True:
                                     status = f"[SNIPER] [cyan][{token_mint}] [{min_sol}-{max_sol} SOL][/]"
 
                                     last_txs = get_last_account_txs(
-                                        rpc=sol_rpc,
+                                        rpc=snipe_rpc,
                                         account="8BYmYs3zsBhftNELJdiKsCN2WyCBbrTwXd6WG4AFPr6n", 
                                         limit=10, 
                                         commitment="confirmed",
@@ -3376,7 +3387,7 @@ while True:
                 monitorCollectionsFloorT.start()
                 
                 coral_cube = CoralCube(
-                    rpc=sol_rpc,
+                    rpc=snipe_rpc,
                     privkey=privkey,
                 )
                 
@@ -3421,7 +3432,7 @@ while True:
                             status = f"[SNIPER] [cyan][COLLECTIONS ~ {len(loaded_collections)}][/]"
                             
                             last_txs = get_last_account_txs(
-                                rpc=sol_rpc,
+                                rpc=snipe_rpc,
                                 account="hausS13jsjafwWwGqZTUQRmWyvyxn9EQpqMwV1PBBmk", 
                                 limit=10, 
                                 commitment="confirmed",
@@ -3451,7 +3462,7 @@ while True:
                                             price_in_sol = lamports_to_sol(listing_info["price"])
                                             price_in_lamports = listing_info["price"]
                                             
-                                            nft_metadata = get_nft_metadata(mint_key=mint_address, rpc=sol_rpc)
+                                            nft_metadata = get_nft_metadata(mint_key=mint_address, rpc=mint_rpc)
                                             
                                             if nft_metadata:
                                                 
@@ -3757,7 +3768,7 @@ while True:
         
         if mode == 12:
             
-            if not valid_sol_rpc:
+            if not valid_mint_rpc or not valid_snipe_rpc:
 
                 console.input("[yellow] ERROR![/] [red]Invalid or unreachable RPC [/]", password=True)
 
@@ -3834,13 +3845,13 @@ while True:
 
                             with console.status(f"[yellow]Downloading candy machine data[/]", spinner="bouncingBar", speed=1.5):
 
-                                cm_metadata = asyncio.run(get_program_account_idl("CandyMachine", CM, PROGRAM, sol_rpc))
+                                cm_metadata = asyncio.run(get_program_account_idl("CandyMachine", CM, PROGRAM, SolanaEndpoints.MAINNET_RPC))
                                 
                                 if mode == 1:
                                     
                                     pda_account = get_collection_pda_account(cmid=CM)
 
-                                    collection_set_metadata = asyncio.run(get_program_account_idl("CollectionPDA", pda_account, PROGRAM, sol_rpc))
+                                    collection_set_metadata = asyncio.run(get_program_account_idl("CollectionPDA", pda_account, PROGRAM, SolanaEndpoints.MAINNET_RPC))
 
                                 if cm_metadata:
                                     
@@ -3878,7 +3889,7 @@ while True:
                             
                         while True:
 
-                            recent_blockhash = get_blockhash(sol_rpc)
+                            recent_blockhash = get_blockhash(mint_rpc)
 
                             if recent_blockhash:
                                 
@@ -4052,7 +4063,7 @@ while True:
 
                 while time.time() < timeout:
                     
-                    supply = ExchangeArt.get_collection_supply(CM, sol_rpc)
+                    supply = ExchangeArt.get_collection_supply(CM, mint_rpc)
                     
                     if supply:
                         
@@ -4062,7 +4073,7 @@ while True:
                         
                         if minted != last_edition:
                             
-                            blockhash = get_blockhash(sol_rpc)
+                            blockhash = get_blockhash(mint_rpc)
                             
                             for wallet in wallets:
                                 
@@ -4074,7 +4085,7 @@ while True:
 
                                 if tasks:
                                         
-                                    mintT = Thread(target=send_ea_tx, args=[privkey, sol_rpc, blockhash, minted, status])
+                                    mintT = Thread(target=send_ea_tx, args=[privkey, mint_rpc, blockhash, minted, status])
                                     mintT.start()
                                     trs.append(mintT)
                             
@@ -4086,7 +4097,7 @@ while True:
                         
                         console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [red]Error fetching new editions[/]\n".format("ALL", "FETCH", show_drop_time)), end="")
 
-                    time.sleep(0.3)
+                    time.sleep(0.2)
                     
                 for tr in trs:
                     tr.join()

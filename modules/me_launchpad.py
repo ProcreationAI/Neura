@@ -113,7 +113,7 @@ class MagicEdenLaunchpad():
     
         return Blockhash(res['result']['value']['blockhash'])
 
-    def get_transaction_hash(self, blockhash: Blockhash) -> Response:
+    def get_transaction_hash(self, blockhash: Blockhash) -> dict:
                     
         headers = {
             'Host': 'wk-notary-prod.magiceden.io',

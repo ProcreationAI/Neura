@@ -51,7 +51,7 @@ def get_last_account_txs(rpc: str, account: str, limit: int, commitment: str, un
         return txs
 
     except:
-                
+                        
         return None
     
 def get_blockhash(rpc: str) -> Blockhash:

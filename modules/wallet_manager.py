@@ -63,10 +63,8 @@ class SolWalletManager():
                 
             return tx_hash
         
-        except Exception as e:
-            
-            print(e)
-                        
+        except:
+                                    
             return None
         
     def transfer_nft(self, mint_address: str, to_address: str):
