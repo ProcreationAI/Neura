@@ -27,13 +27,13 @@ def on_message(_, message):
 
     tx = json.loads(message)["params"]["result"]["value"]
 
-    print(datetime.now().strftime("%H:%M:%S"), tx["signature"])
 
-    """ logs = "".join(tx["logs"])
+    logs = "".join(tx["logs"])
     
     if not tx["err"] and "Instruction: Sell" in logs:
         
-        listing_data = me.check_tx_is_listing(tx["signature"])
+        print(datetime.now().strftime("%H:%M:%S"), tx["signature"])
+        """ listing_data = me.check_tx_is_listing(tx["signature"])
         
         if listing_data:
             
@@ -62,6 +62,7 @@ def on_error(_, error):
     print(error)
 
 rpc = "wss://snipe.acidnode.io/"
+
 me = MagicEden(
     rpc="https://snipe.acidnode.io/",
     privkey="3chJPsP3iLRAg2FiRrd5D1N4DfKKhkVw2DWpWP7rf9L7ccFNE5kp39aX86D7BQRZfXuxyXdgyAAdBqW5mkQVNx87"

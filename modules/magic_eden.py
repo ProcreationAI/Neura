@@ -14,7 +14,7 @@ from rich.console import Console
 from solana.rpc.core import UnconfirmedTxError
 from urllib.parse import quote
 
-from utils.bypass import create_tls_payload
+from utils.bypass import create_tls_payload, get_random_ua
 from utils.solana import get_lamports_from_listing_data, sol_to_lamports, lamports_to_sol
 
 TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
@@ -76,7 +76,7 @@ class MagicEden():
                 method="GET",
                 headers=headers
             )
-
+            get_random_ua()
             res = requests.post("http://127.0.0.1:3000",
                                 json=payload, timeout=3).json()
 
@@ -171,7 +171,7 @@ class MagicEden():
                 res = requests.post("http://127.0.0.1:3000",json=payload, timeout=5).json()
 
                 results += json.loads(res["body"])["results"]
-
+            
             return results
         
         except:
@@ -222,7 +222,6 @@ class MagicEden():
                 'authority': 'api-mainnet.magiceden.io',
                 'accept': 'application/json, text/plain, */*',
                 'accept-language': 'es-ES,es;q=0.9',
-                'if-none-match': 'W/"276b-MeuoZ0jLK0q42mx9aS5qPsvRkpg"',
                 'origin': 'https://magiceden.io',
                 'referer': 'https://magiceden.io/',
                 'sec-ch-ua': '".Not/A)Brand";v="99", "Google Chrome";v="103", "Chromium";v="103"',
@@ -254,7 +253,7 @@ class MagicEden():
 
         try:
                         
-            tx = self.client.get_transaction(tx_sig=tx, commitment=Commitment("processed"))["result"]
+            tx = self.client.get_transaction(tx_sig=tx, commitment=Commitment("confirmed"))["result"]
 
             logs = "".join(tx["meta"]["logMessages"])
             accounts = tx["transaction"]["message"]["accountKeys"]
@@ -278,7 +277,7 @@ class MagicEden():
                 }
                 
         except:
-                        
+                                    
             pass
         
         return None

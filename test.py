@@ -29,7 +29,7 @@ import aiohttp
 from lib.idl import AccountClient
 import subprocess
 
-from modules.magic_eden import MagicEden
+from modules import MagicEden, CoralCube
 from utils.constants import *
 from utils.solana import get_nft_metadata
 
@@ -255,16 +255,16 @@ def send_sniper_webhook(mint: str, tx: str, price: float, sniping_time: float, w
     return None
 
 
-sol_rpc = "https://thrumming-damp-shadow.solana-mainnet.quiknode.pro/362bbea5917e5ec837d4e76ffe9aafcc1d22a44c/"
+sol_rpc = "https://api.mainnet-beta.solana.com"
 sol_rpc = "https://snipe.acidnode.io/"
 
 client = Client(sol_rpc)
 
-""" a = client.get_signatures_for_address("ArAA6CZC123yMJLUe4uisBEgvfuw2WEvex9iFmFCYiXv", limit=10, commitment=Commitment("processed"))
+a = client.get_signature_statuses(["59QnTjNcXGzkuaHAjtDifH1dSSJFsBZU1U4oEGevtuvpVX87GFXKg2Y9G2yyz9nA3LnDvpEUFLixzmaM3uPf9WjC"])
 
-print(json.dumps(a, indent=3))
-
-exit() """
+print(a)
+        
+exit()
 
 i = 10
 until_tx = None

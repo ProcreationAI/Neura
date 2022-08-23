@@ -38,8 +38,9 @@ from modules import (
     BifrostLaunchpad,
     ExchangeArt
 )
+from modules.lmn_launchpad import LMN_PROGRAM
 
-from utils.constants import Bot, Discord, SolanaPrograms, SolanaEndpoints, Keys
+from utils.constants import Bot, Discord, SolanaPrograms, SolanaEndpoints, Keys, IDLs
 from utils.bot import logger, get_config, get_hwid, set_app_title
 from utils.bypass import create_tls_payload, start_tls
 
@@ -488,7 +489,7 @@ def send_sniper_webhook(mint: str, tx: str, price: float, webhook: str):
         
         embed.set_title(name, url)
         embed.set_thumbnail(img)
-        embed.set_footer(f"Neura - {Bot.VERSION}", Discord.EMBED_FOOTER_IMG)
+        embed.set_footer(Discord.EMBED_FOOTER_TXT, Discord.EMBED_FOOTER_IMG)
         
         embed.add_field("**Price**", f"{price} SOL", inline=False)
         embed.add_field("**Transaction**", f"[Explorer]({tx_url})", inline=False)
@@ -927,7 +928,7 @@ def validate_cc_purchase_results(nft_data: dict, filters: dict, min_rank: int, m
             
             return False
 
-    if min_rank is not None and max_rank is not None:
+    if min_rank is not None and max_rank is not None and nft_data.get("rarity_rank"):
     
         if nft_data["rarity_rank"]:
                     
@@ -1168,7 +1169,7 @@ def monitor_me_sniper_file(file_name: str):
                 reader = list(reader)
                 
             keys = reader[0]
-            rows = reader[1:]
+            rows = reader[1:30]
             
             if not rows and sniper_start:
                 
@@ -1260,7 +1261,7 @@ def monitor_cc_sniper_file(file_name: str):
                 reader = list(reader)
                 
             keys = reader[0]
-            rows = reader[1:]
+            rows = reader[1:30]
             
             if not rows and sniper_start:
                 
@@ -1402,7 +1403,7 @@ def monitor_me_collection_floor():
                 
                 tr.join()
                 
-            time.sleep(10)
+            time.sleep(15)
 
 
 
@@ -1431,7 +1432,7 @@ def monitor_cc_collection_floor():
                 
                 tr.join()
                 
-            time.sleep(10)
+            time.sleep(15)
 
 def bifrost_dc_login(mint_site: str, dc_auth_token: str) -> None | BifrostAuth:
     
@@ -1526,7 +1527,13 @@ def get_drop_time():
 
     if PROGRAM in [SolanaPrograms.CMV2_PROGRAM, SolanaPrograms.LMN_PROGRAM]:
 
-        meta = asyncio.run(get_program_account_idl("CandyMachine", CM, PROGRAM, SolanaEndpoints.MAINNET_RPC))
+        if PROGRAM == SolanaPrograms.CMV2_PROGRAM:
+            
+            meta = asyncio.run(get_program_account_idl("CandyMachine", CM, PROGRAM, SolanaEndpoints.MAINNET_RPC))
+
+        elif PROGRAM == SolanaPrograms.LMN_PROGRAM:
+            
+            meta = asyncio.run(get_program_account_idl("CandyMachine", CM, PROGRAM, SolanaEndpoints.MAINNET_RPC, IDLs.LMN_IDL))
 
         return int(meta.data.go_live_date) if meta else None
 
@@ -1631,7 +1638,8 @@ def get_cm_mints_status(cm: str | dict, program: str):
             "CandyMachine",
             account=cm,
             prog=program,
-            rpc=SolanaEndpoints.MAINNET_RPC
+            rpc=SolanaEndpoints.MAINNET_RPC,
+            prog_idl=IDLs.LMN_IDL if program == SolanaPrograms.LMN_PROGRAM else None
         ))
 
         if metadata:
@@ -1909,27 +1917,28 @@ def show_selected_nfts():
 
 def check_node_health():
         
-    try:
-        
-        client = Client(mint_rpc)
-        
-        chain_client = Client(SolanaEndpoints.MAINNET_RPC)
-        
-        for _ in range(5):
+    for node in [snipe_rpc, mint_rpc]:
             
-            real_slot = chain_client.get_slot()["result"]
+        for _ in range(3):
             
-            node_slot = client.get_slot()["result"]
-            
-            delay = real_slot - node_slot if real_slot - node_slot >= 0 else 0
-            
-            console.print(f" [yellow]Your node is behind by[/] [white]{delay}[/] [yellow]slots[yellow]")
-            
+            try:
+                client = Client(node)
+                
+                chain_client = Client(SolanaEndpoints.MAINNET_RPC)
+                
+                real_slot = chain_client.get_slot()["result"]
+                
+                node_slot = client.get_slot()["result"]
+                
+                delay = real_slot - node_slot if real_slot - node_slot >= 0 else 0
+                
+                console.print(f" [yellow]Your node[/] [cyan]{node}[/] [yellow]is behind by[/] [white]{delay}[/] [yellow]slots[yellow]")
+                
+            except:
+                
+                console.print(f" [red]Unreachable node[/] [cyan]{node}[/]")
+                
             time.sleep(0.5)
-            
-    except:
-        
-        console.print(f" [red]Unreachable node[/]")
 
 def get_module():
 
@@ -1951,7 +1960,7 @@ def get_module():
 
         except KeyboardInterrupt:
 
-            exit(0)
+            exit()
 
         console.print("[red]    Invalid option provided[/]")
 
@@ -2128,15 +2137,15 @@ while True:
     
     print()
 
-    console.print("[cyan] [1][/] CandyMachine mint")
-    console.print("[cyan] [2][/] MagicEden mint")
-    console.print("[cyan] [3][/] MagicEden sniper")
-    console.print("[cyan] [4][/] Wallets manager")
-    console.print("[cyan] [5][/] MagicEden sweeper")
-    console.print("[cyan] [6][/] FamousFox sniper")
-    console.print("[cyan] [7][/] LaunchMyNFT mint")
-    console.print("[cyan] [8][/] CoralCube sniper")
-    console.print("[cyan] [9][/] MonkeLabs mint")
+    console.print("[cyan] [1 ][/] CandyMachine mint")
+    console.print("[cyan] [2 ][/] MagicEden mint")
+    console.print("[cyan] [3 ][/] MagicEden sniper")
+    console.print("[cyan] [4 ][/] Wallets manager")
+    console.print("[cyan] [5 ][/] MagicEden sweeper")
+    console.print("[cyan] [6 ][/] FamousFox sniper")
+    console.print("[cyan] [7 ][/] LaunchMyNFT mint")
+    console.print("[cyan] [8 ][/] CoralCube sniper")
+    console.print("[cyan] [9 ][/] MonkeLabs mint")
     console.print("[cyan] [10][/] Soon...")
     console.print("[cyan] [11][/] ExchangeArt mint")
     console.print("[cyan] [12][/] Node health checker\n")
@@ -3433,7 +3442,7 @@ while True:
                             
                             last_txs = get_last_account_txs(
                                 rpc=snipe_rpc,
-                                account="hausS13jsjafwWwGqZTUQRmWyvyxn9EQpqMwV1PBBmk", 
+                                account="29xtkHHFLUHXiLoxTzbC7U8kekTwN3mVQSkfXnB1sQ6e", 
                                 limit=10, 
                                 commitment="confirmed",
                                 until=until_tx
@@ -3844,9 +3853,15 @@ while True:
                         if mode in [1, 2, 7]:
 
                             with console.status(f"[yellow]Downloading candy machine data[/]", spinner="bouncingBar", speed=1.5):
-
-                                cm_metadata = asyncio.run(get_program_account_idl("CandyMachine", CM, PROGRAM, SolanaEndpoints.MAINNET_RPC))
                                 
+                                if mode in [1, 2]:
+                                
+                                    cm_metadata = asyncio.run(get_program_account_idl("CandyMachine", CM, PROGRAM, SolanaEndpoints.MAINNET_RPC))
+                                
+                                else:
+                                    
+                                    cm_metadata = asyncio.run(get_program_account_idl("CandyMachine", CM, PROGRAM, SolanaEndpoints.MAINNET_RPC, prog_idl=IDLs.LMN_IDL))
+
                                 if mode == 1:
                                     
                                     pda_account = get_collection_pda_account(cmid=CM)
@@ -4037,7 +4052,6 @@ while True:
                     
                     
             elif mode == 11:
-                
 
                 if user_time:
 
@@ -4053,7 +4067,7 @@ while True:
 
                     wait_for_drop()
                 
-                timeout = time.time() + 30
+                timeout = time.time() + 60
                 last_edition = None
                 
                 trs = []
@@ -4092,10 +4106,10 @@ while True:
                             last_edition = minted
                             
                             i += 1
-                    
+
                     else:
                         
-                        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [red]Error fetching new editions[/]\n".format("ALL", "FETCH", show_drop_time)), end="")
+                        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [red]Error fetching new editions / collection oos[/]\n".format("ALL", "FETCH", show_drop_time)), end="")
 
                     time.sleep(0.2)
                     

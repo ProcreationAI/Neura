@@ -13,7 +13,7 @@ from utils.bypass import create_tls_payload
 from utils.solana import sol_to_lamports
 
 
-SLIPPAGE = 5
+SLIPPAGE = 15
 BIFROST_SIGNER = "BFMGKvziBENLDdpFs3y75d9myFYF9ZqhTyxqet9ohB4N"
 
 class BifrostAuth():

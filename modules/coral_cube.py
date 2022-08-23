@@ -31,7 +31,7 @@ console = Console(highlight=False, log_path=False)
 
 class CoralCube():
 
-    def __init__(self, rpc: str = None, privkey: str = None):
+    def __init__(self, rpc: str, privkey: str):
 
         self.client = Client(rpc)
 
@@ -98,8 +98,7 @@ class CoralCube():
                 headers=headers
             )
 
-            res = requests.post("http://127.0.0.1:3000",
-                                json=payload, timeout=3).json()
+            res = requests.post("http://127.0.0.1:3000",json=payload, timeout=3).json()
 
             return json.loads(res["body"])
 
@@ -162,8 +161,8 @@ class CoralCube():
 
         try:
 
-            tx = self.client.get_transaction(tx_sig=tx, commitment=Commitment("confirmed"))["result"]
-
+            tx = self.client.get_transaction(tx_sig=tx, commitment=Commitment("finalized"))["result"]
+            
             logs = "".join(tx["meta"]["logMessages"])
             accounts = tx["transaction"]["message"]["accountKeys"]
 
@@ -183,7 +182,7 @@ class CoralCube():
                 }
 
         except:
-
+            
             pass
 
         return None

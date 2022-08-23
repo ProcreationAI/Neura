@@ -1,8 +1,6 @@
 from dhooks import Embed, Webhook
 
 
-
-
 embed = Embed(
     color=0x6436CB
 )
@@ -31,6 +29,13 @@ value = """
 - Custom wallets, tasks and delay 
 """
 embed.add_field(name="**LaunchMyNFT minting** <:mmm:783824151835443200>", value=value, inline=False)
+
+value = """
+- Auto-scheduling
+- Custom wallets, tasks and delay
+- Box tax reduction method 
+"""
+embed.add_field(name="**ExchangeArt minting** <:mmm:783824151835443200>", value=value, inline=False)
 
 value = """
 - Auto-scheduling
@@ -81,7 +86,10 @@ value = """
 embed.add_field(name="**Alpha group opportunites** :sparkles:", value=value, inline=False)
 
 value = """
-- Currently on beta testing for holders
+- Free to use for all holders
+- Peak performance on both minting and sniping
+- Option to rent out the node to get extra cash
+- IP whitelisting
 """
 embed.add_field(name="**Custom RPC node** :zap:", value=value, inline=False)
 
@@ -97,6 +105,6 @@ twitter = "https://twitter.com/txNeura"
 links = f"[MagicEden]({magiceden}) [OpenSea]({opensea}) [Twitter]({twitter})"
 
 embed.add_field(name="‎", value=links)
-embed.set_image(url="https://cdn.discordapp.com/attachments/974346875538898974/983789981686448158/banner.png")
+embed.set_image(url="https://cdn.discordapp.com/attachments/928052931067011123/1011731680547057744/neura1.png")
 
 Webhook(webhook).send(embed=embed)

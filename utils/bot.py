@@ -1,11 +1,12 @@
 from datetime import datetime
 import configparser
+import json
 import re
 import os
 import subprocess
 import sys
 
-from .constants import Bot
+from .constants import Bot, Paths
 
 
 def logger(text: str):
@@ -85,3 +86,10 @@ def set_app_title(text: str):
     elif Bot.USER_OS == "darwin":
 
         sys.stdout.write(f"\x1b]2;{text}\x07")
+        
+        
+def get_idl(filename: str):
+    
+    with open(os.path.join(Paths.IDLS_PATH, filename), "r") as f:
+        
+        return json.loads(f.read())

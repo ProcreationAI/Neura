@@ -80,6 +80,10 @@ class ExchangeArt():
 
             data = b64decode(data)
 
+            if len(data) != 282:
+                
+                return None
+            
             minted = int.from_bytes(data[1:9], "little")
             available = int.from_bytes(data[10:18], "little")
             

@@ -11,6 +11,8 @@ from solana.rpc.async_api import AsyncClient
 from solana.keypair import Keypair
 from solana.rpc import types
 
+from anchorpy.idl import Idl
+
 from lib.idl import AccountClient
 
 
@@ -200,10 +202,10 @@ def get_nft_metadata(mint_key: str, rpc: str):
         return None
 
 
-async def get_program_account_idl(name: str, account: str, prog: str, rpc: str):
+async def get_program_account_idl(name: str, account: str, prog: str, rpc: str, prog_idl: dict = None):
 
     try:
-
+            
         program = None
         client = None
         
@@ -213,10 +215,16 @@ async def get_program_account_idl(name: str, account: str, prog: str, rpc: str):
 
         provider = Provider(client, Wallet(Keypair.generate()))
         
-        idl = await Program.fetch_idl(
-            program_id,
-            provider
-        )
+        if prog_idl:
+            
+            idl = Idl.from_json(prog_idl)
+            
+        else:
+                
+            idl = await Program.fetch_idl(
+                program_id,
+                provider
+            )
         
         program = Program(
             idl,
@@ -224,6 +232,7 @@ async def get_program_account_idl(name: str, account: str, prog: str, rpc: str):
             provider
         )
 
+        
         candyMachine = await AccountClient.fetch_custom(program.account[name], PublicKey(account))
 
         await program.close()
@@ -232,15 +241,14 @@ async def get_program_account_idl(name: str, account: str, prog: str, rpc: str):
         return candyMachine
 
     except:
-                        
+        
         if program:
-            await program.close()
+            program.close()
+
         if client:
-            await client.close()
+            client.close()
             
         return None
-
-
 def get_lamports_from_listing_data(data: str, left_offset: int, right_offset: int) -> int:
     
     """
