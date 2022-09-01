@@ -257,21 +257,14 @@ def send_sniper_webhook(mint: str, tx: str, price: float, sniping_time: float, w
 
 
 sol_rpc = "https://api.mainnet-beta.solana.com"
-sol_rpc = "https://snipe.acidnode.io/"
+sol_rpc = "https://mint.acidnode.io/"
 #sol_rpc = "https://late-spring-market.solana-mainnet.discover.quiknode.pro/78837b96c6e80f0da8101c6b3342544ad52ad2f9/"
 
 client = Client(sol_rpc)
 
-a = client.get_account_info("Aqw1uJT4o24WKrjKvETvA7ftSjrgMXQFnEywfHKn8f5N")
+a = client.get_account_info("6vFNvGHvCJw8tggobVVTSVVLpAEAYirNetwtyZq9LaJf", encoding="jsonParsed")
 
-data = a["result"]["value"]["data"][0]
-
-data = base64.b64decode(data)
-
-minted = int.from_bytes(data[1:9], "little")
-available = int.from_bytes(data[10:18], "little")
-
-print(minted, available)
+print(a)
 exit()
 
 i = 15

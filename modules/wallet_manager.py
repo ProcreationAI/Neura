@@ -7,8 +7,9 @@ from spl.token.instructions import create_associated_token_account, transfer_che
 from solana.rpc.types import TxOpts
 from base58 import b58decode
 from solana.system_program import TransferParams, transfer
-from solana.rpc.commitment import Commitment
-from solana.blockhash import Blockhash
+
+
+from utils.solana import get_blockhash, get_nft_metadata
 
 SYSTEM_CLOCK_PROGRAM = 'SysvarC1ock11111111111111111111111111111111'
 SYSTEM_RECENT_BLOCKHASH_PROGRAM = 'SysvarRecentB1ockHashes11111111111111111111'
@@ -27,96 +28,125 @@ class SolWalletManager():
     
     def __init__(self, rpc: str, privkey: str):
         
+        self.rpc = rpc
         self.client = Client(rpc)
         
         self.payer = Keypair.from_secret_key(b58decode(privkey))
 
-    def _get_blockhash(self):
-
-        res = self.client.get_recent_blockhash(Commitment('finalized'))
-
-        return Blockhash(res['result']['value']['blockhash'])
-        
     def transfer_sol(self, amount: int, to_address: str):
 
         OPTS = TxOpts(skip_preflight=True, skip_confirmation=True)
 
         transaction = Transaction()
         
-        try:
-            
-            transaction.add(
-                transfer(
-                    TransferParams(
-                        from_pubkey=PublicKey(self.payer.public_key),
-                        to_pubkey=PublicKey(to_address),
-                        lamports=amount
-                    )
+        
+        transaction.add(
+            transfer(
+                TransferParams(
+                    from_pubkey=PublicKey(self.payer.public_key),
+                    to_pubkey=PublicKey(to_address),
+                    lamports=amount
                 )
             )
-            
-            tx_hash = self.client.send_transaction(transaction, self.payer, opts=OPTS)["result"]
-                
-            return tx_hash
+        )
         
+        signers = [
+            self.payer
+        ]
+        
+        try:
+            
+            transaction.recent_blockhash = get_blockhash(self.rpc)
+            transaction.sign(*signers)
+            
+            tx = transaction.serialize()
+
+            tx_hash = self.client.send_raw_transaction(tx, OPTS)['result']
+            
+            return tx_hash
+
         except:
-                                    
-            return None
+                                                
+            return False
         
     def transfer_nft(self, mint_address: str, to_address: str):
 
         OPTS = TxOpts(skip_preflight=True, skip_confirmation=True)
 
         transaction = Transaction(fee_payer=self.payer.public_key)
+                
+        transaction.add(
+            TransactionInstruction(
+                keys=[
+                    AccountMeta(pubkey=PublicKey(to_address),is_signer=False, is_writable=False)
+                ],
+                program_id=PublicKey(NFT_TRANSFER_PROGRAM),
+                data=b58decode("11111111111111111111111111111111")
+            )
+        )
+
+        token_ata = get_associated_token_address(owner=PublicKey(to_address), mint=PublicKey(mint_address))
 
         try:
-                
-            transaction.add(
-                TransactionInstruction(
-                    keys=[
-                        AccountMeta(pubkey=PublicKey(to_address),is_signer=False, is_writable=False)
-                    ],
-                    program_id=PublicKey(NFT_TRANSFER_PROGRAM),
-                    data=b58decode("11111111111111111111111111111111")
-                )
-            )
-
-            token_ata = get_associated_token_address(owner=PublicKey(to_address), mint=PublicKey(mint_address))
-
+            
             check_account = self.client.get_account_info(token_ata)
 
-            if not check_account['result']['value']:
-                transaction.add(
-                    create_associated_token_account(
-                        payer=self.payer.public_key,
-                        owner=PublicKey(to_address),
-                        mint=PublicKey(mint_address)
-                    )
-                )
-
-            tokenholder = PublicKey(self.client.get_token_largest_accounts(mint_address)['result']['value'][0]['address'])
-
-            transaction.add(
-                transfer_checked(
-                    TransferCheckedParams(
-                        amount=1,
-                        dest=token_ata,
-                        source=tokenholder,
-                        owner=self.payer.public_key,
-                        decimals=0,
-                        program_id=PublicKey(TOKEN_PROGRAM_ID),
-                        mint=PublicKey(mint_address),
-                        signers=[]
-                    )
-                ))
-            
-            tx_hash = self.client.send_transaction(transaction, self.payer, opts=OPTS)["result"]
-
-            return tx_hash
-        
         except:
             
             return None
+        
+        if not check_account['result']['value']:
+            transaction.add(
+                create_associated_token_account(
+                    payer=self.payer.public_key,
+                    owner=PublicKey(to_address),
+                    mint=PublicKey(mint_address)
+                )
+            )
+
+
+        try:
+            
+            tokenholder = PublicKey(self.client.get_token_largest_accounts(mint_address)['result']['value'][0]['address'])
+
+        except:
+            
+            return None
+        
+        transaction.add(
+            transfer_checked(
+                TransferCheckedParams(
+                    amount=1,
+                    dest=token_ata,
+                    source=tokenholder,
+                    owner=self.payer.public_key,
+                    decimals=0,
+                    program_id=PublicKey(TOKEN_PROGRAM_ID),
+                    mint=PublicKey(mint_address),
+                    signers=[]
+                )
+            ))
+        
+        signers = [
+            self.payer
+        ]
+        
+        try:
+            
+            transaction.recent_blockhash = get_blockhash(self.rpc)
+            transaction.sign(*signers)
+            
+            tx = transaction.serialize()
+
+            tx_hash = self.client.send_raw_transaction(tx, OPTS)['result']
+            
+            return tx_hash
+
+        except:
+                                                
+            return False
+    
+
         
     def burn_nft(self, mint: str):
         
@@ -151,15 +181,24 @@ class SolWalletManager():
             )
         )
         
+        signers = [
+            self.payer
+        ]
+        
         try:
             
-            tx_hash = self.client.send_transaction(transaction, self.payer, opts=OPTS)["result"]
+            transaction.recent_blockhash = get_blockhash(self.rpc)
+            transaction.sign(*signers)
+            
+            tx = transaction.serialize()
+
+            tx_hash = self.client.send_raw_transaction(tx, OPTS)['result']
             
             return tx_hash
-            
+
         except:
-            
-            return None
+                                                
+            return False
     
     def full_burn_nft(self, mint: str):
         
@@ -196,6 +235,9 @@ class SolWalletManager():
             program_id=PublicKey(METADATA_PROGRAM_ID)
         )
         
+        
+        nft_metadata = get_nft_metadata(mint, self.rpc)
+        
         keys = [
             AccountMeta(pubkey=METADATA_PROGRAM_ADDRESS[0], is_signer=False, is_writable=True),
             AccountMeta(pubkey=PublicKey(self.payer.public_key), is_signer=True, is_writable=True),
@@ -203,9 +245,21 @@ class SolWalletManager():
             AccountMeta(pubkey=PublicKey(payer_ata), is_signer=False, is_writable=True),
             AccountMeta(pubkey=EDITION_PROGRAM_ADDRESS[0], is_signer=False, is_writable=True),
             AccountMeta(pubkey=PublicKey(TOKEN_PROGRAM_ID), is_signer=False, is_writable=False)
-            
         ]
         
+        if nft_metadata["collection"]:
+            
+            COLLECTION_METADATA = PublicKey.find_program_address(
+                seeds=[
+                    'metadata'.encode('utf-8'),
+                    bytes(PublicKey(METADATA_PROGRAM_ID)),
+                    bytes(PublicKey(nft_metadata["collection"]))
+                ],
+                program_id=PublicKey(METADATA_PROGRAM_ID)
+            )
+            
+            keys.append(AccountMeta(pubkey=COLLECTION_METADATA[0], is_writable=True, is_signer=False))
+            
         transaction.add(
             TransactionInstruction(
                 keys=keys,
@@ -214,19 +268,24 @@ class SolWalletManager():
             )
         )
 
-        transaction.fee_payer = self.payer.public_key
-        transaction.recent_blockhash = self._get_blockhash()
-                
-        wallet = Wallet(self.payer)
+        signers = [
+            self.payer
+        ]
         
-        tx = wallet.sign_all_transactions([transaction])[0]
+        try:
+            
+            transaction.recent_blockhash = get_blockhash(self.rpc)
+            transaction.sign(*signers)
+            
+            tx = transaction.serialize()
 
-        
-        txn = tx.serialize(verify_signatures=False)
-        
-        tx_hash = self.client.send_raw_transaction(txn, opts=OPTS)["result"]
-        
-        return tx_hash
+            tx_hash = self.client.send_raw_transaction(tx, OPTS)['result']
+            
+            return tx_hash
+
+        except:
+                                                
+            return False
         
 
         

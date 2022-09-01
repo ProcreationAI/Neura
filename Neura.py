@@ -2764,7 +2764,7 @@ while True:
                     )
                     
                     wallet_manager = SolWalletManager(
-                        rpc=mint_rpc,
+                        rpc=snipe_rpc,
                         privkey=privkey
                     )
                     

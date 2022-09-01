@@ -12,7 +12,7 @@ import requests
 import json
 
 from utils.bypass import create_tls_payload
-from utils.solana import get_lamports_from_listing_data
+from utils.solana import get_lamports_from_listing_data, get_blockhash
 
 WRAPPED_SOL = "So11111111111111111111111111111111111111112"
 METADATA_PROGRAM_ID = 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
@@ -32,16 +32,11 @@ console = Console(highlight=False, log_path=False)
 class CoralCube():
 
     def __init__(self, rpc: str, privkey: str):
-
+        
+        self.rpc = rpc
         self.client = Client(rpc)
 
         self.payer = Keypair.from_secret_key(b58decode(privkey))
-
-    def _get_blockhash(self):
-
-        res = self.client.get_recent_blockhash(Commitment('finalized'))
-
-        return Blockhash(res['result']['value']['blockhash'])
 
     @staticmethod
     def _receipt_token(account: str, mint_address: str):
@@ -275,7 +270,7 @@ class CoralCube():
 
         try:
 
-            transaction.recent_blockhash = self._get_blockhash()
+            transaction.recent_blockhash = get_blockhash(self.rpc)
             transaction.sign(*signers)
 
             tx = transaction.serialize()
@@ -441,7 +436,7 @@ class CoralCube():
 
         try:
 
-            transaction.recent_blockhash = self._get_blockhash()
+            transaction.recent_blockhash = get_blockhash(self.rpc)
             transaction.sign(*signers)
 
             tx = transaction.serialize()

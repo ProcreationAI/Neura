@@ -50,12 +50,6 @@ class ExchangeArt():
         self.supply = mint_info["masterEditionAccount"]["maxSupply"]
         self.creators = [acc["address"] for acc in mint_info["metadataAccount"]["creators"]] if mint_info["metadataAccount"].get("creators") else []
 
-    def _get_blockhash(self):
-
-        res = self.client.get_recent_blockhash(Commitment('finalized'))
-
-        return Blockhash(res['result']['value']['blockhash'])
-    
     
     @staticmethod
     def get_collection_supply(mint_key: str, rpc):

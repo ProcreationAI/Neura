@@ -15,7 +15,7 @@ from solana.rpc.core import UnconfirmedTxError
 from urllib.parse import quote
 
 from utils.bypass import create_tls_payload
-from utils.solana import get_lamports_from_listing_data, sol_to_lamports, lamports_to_sol
+from utils.solana import get_blockhash, get_lamports_from_listing_data, sol_to_lamports, lamports_to_sol
 
 TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
 TOKEN_METADATA_ID = 'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s'
@@ -42,15 +42,10 @@ class MagicEden():
     
     def __init__(self, rpc: str, privkey: str):
         
+        self.rpc = rpc
         self.client = Client(rpc)
 
         self.payer = Keypair.from_secret_key(b58decode(privkey))
-
-    def _get_blockhash(self):
-
-        res = self.client.get_recent_blockhash(Commitment('finalized'))
-
-        return Blockhash(res['result']['value']['blockhash'])
 
     @staticmethod
     def get_nft_data(mint: str) -> dict | None:
@@ -634,7 +629,7 @@ class MagicEden():
         
         try:
 
-            transaction.recent_blockhash = self._get_blockhash()
+            transaction.recent_blockhash = get_blockhash(self.rpc)
             transaction.sign(*signers)
 
             tx = transaction.serialize()

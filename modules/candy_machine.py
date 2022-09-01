@@ -38,12 +38,6 @@ class CandyMachinev2():
 
         self.payer = Keypair.from_secret_key(b58decode(privkey))
 
-    def _get_blockhash(self):
-
-        res = self.client.get_recent_blockhash(Commitment('finalized'))
-
-        return Blockhash(res['result']['value']['blockhash'])
-
     def create_transaction(self):
         
         self.transaction = Transaction()

@@ -7,7 +7,7 @@ from solana.publickey import PublicKey
 from solana.transaction import AccountMeta, TransactionInstruction, Transaction
 from base58 import b58decode, b58encode
 
-from utils.solana import get_lamports_from_listing_data
+from utils.solana import get_blockhash, get_lamports_from_listing_data
 
 TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
 SYSTEM_PROGRAM_ID = '11111111111111111111111111111111'
@@ -29,17 +29,11 @@ class FamousFox():
     
     def __init__(self, rpc: str, privkey: str):
         
+        self.rpc = rpc
         self.client = Client(rpc)
         
         self.payer = Keypair.from_secret_key(b58decode(privkey))
 
-    def _get_blockhash(self):
-
-        res = self.client.get_recent_blockhash(Commitment('finalized'))
-    
-        return Blockhash(res['result']['value']['blockhash'])
-
-    
     def check_tx_is_listing(self, tx: str) -> dict | None:
 
         try:
@@ -57,14 +51,14 @@ class FamousFox():
                 if "Instruction: ListItem" in logs:
                                         
                     mint = tx["meta"]["postTokenBalances"][0]["mint"]
-                    lamports = get_lamports_from_listing_data(data=instr_data, left_offset=32, right_offset=0)
+                    lamports = get_lamports_from_listing_data(data=instr_data, left_offset=32)
                     seller = accounts[0]
 
                 elif "Instruction: UpdateItem" in logs:
                     
                     mint = accounts[-1]
-                    lamports = get_lamports_from_listing_data(data=instr_data, left_offset=16, right_offset=0)
-                    seller = accounts[2]
+                    lamports = get_lamports_from_listing_data(data=instr_data, left_offset=16)
+                    seller = accounts[0]
                                 
                 return {
                     "price": lamports,
@@ -170,7 +164,7 @@ class FamousFox():
         
         try:
             
-            transaction.recent_blockhash = self._get_blockhash()
+            transaction.recent_blockhash = get_blockhash(self.rpc)
             transaction.sign(*signers)
             
             tx = transaction.serialize()

@@ -120,11 +120,9 @@ def _unpack_metadata_account(data):
 
     assert(data[0] == 4)
     i = 1
-    source_account = base58.b58encode(
-        bytes(struct.unpack('<' + "B"*32, data[i:i+32])))
+    source_account = base58.b58encode(bytes(struct.unpack('<' + "B"*32, data[i:i+32])))
     i += 32
-    mint_account = base58.b58encode(
-        bytes(struct.unpack('<' + "B"*32, data[i:i+32])))
+    mint_account = base58.b58encode(bytes(struct.unpack('<' + "B"*32, data[i:i+32])))
     i += 32
     name_len = struct.unpack('<I', data[i:i+4])[0]
     i += 4
@@ -149,8 +147,7 @@ def _unpack_metadata_account(data):
         creator_len = struct.unpack('<I', data[i:i+4])[0]
         i += 4
         for _ in range(creator_len):
-            creator = base58.b58encode(
-                bytes(struct.unpack('<' + "B"*32, data[i:i+32])))
+            creator = base58.b58encode(bytes(struct.unpack('<' + "B"*32, data[i:i+32])))
             creators.append(creator.decode("utf-8").strip("\x00"))
             i += 32
             verified.append(data[i])
@@ -160,6 +157,12 @@ def _unpack_metadata_account(data):
     primary_sale_happened = bool(data[i])
     i += 1
     is_mutable = bool(data[i])
+    
+    i += 7
+
+    collection_address = base58.b58encode(data[i:][:32])
+    
+    collection_address = collection_address.decode("utf-8").strip("\x00") if not collection_address.isdigit() else None
     
     metadata = {
         "update_authority": source_account.decode("utf-8").strip("\x00"),
@@ -175,7 +178,9 @@ def _unpack_metadata_account(data):
         },
         "primary_sale_happened": primary_sale_happened,
         "is_mutable": is_mutable,
+        "collection": collection_address
     }
+    
     return metadata
 
 def get_uri_metadata(uri: str):
@@ -203,8 +208,8 @@ def get_nft_metadata(mint_key: str, rpc: str):
 
         return metadata
 
-    except:  
-        
+    except:
+                        
         return None
 
 
@@ -255,7 +260,7 @@ async def get_program_account_idl(name: str, account: str, prog: str, rpc: str, 
             client.close()
             
         return None
-def get_lamports_from_listing_data(data: str, left_offset: int, right_offset: int) -> int:
+def get_lamports_from_listing_data(data: str, left_offset: int = None, right_offset: int = None) -> int:
     
     """
     me: 20, 32
@@ -264,7 +269,7 @@ def get_lamports_from_listing_data(data: str, left_offset: int, right_offset: in
     """
     
     right_offset = - right_offset if right_offset else right_offset
-    
+
     data = data[left_offset:right_offset]
 
     return int.from_bytes(bytes.fromhex(data), "little")
