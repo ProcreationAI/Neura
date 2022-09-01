@@ -18,6 +18,7 @@ from base64 import b64decode
 import borsh
 from borsh import types as btypes
 from dhooks import Embed, Webhook
+import websocket
 
 from solana.rpc.api import Client
 from solana.keypair import Keypair
@@ -38,7 +39,6 @@ from modules import (
     BifrostLaunchpad,
     ExchangeArt
 )
-from modules.lmn_launchpad import LMN_PROGRAM
 
 from utils.constants import Bot, Discord, SolanaPrograms, SolanaEndpoints, Keys, IDLs
 from utils.bot import logger, get_config, get_hwid, set_app_title
@@ -54,7 +54,8 @@ from utils.solana import (
     get_wallet_balance, 
     get_blockhash, 
     get_last_account_txs,
-    get_wallet_nfts
+    get_wallet_nfts,
+    get_websocket_url
 )
 
 
@@ -498,9 +499,7 @@ def send_sniper_webhook(mint: str, tx: str, price: float, webhook: str):
             
             Webhook(Discord.SUCCESS_WH).send(embed=embed)
             
-            if webhook:
-                
-                Webhook(webhook).send(embed=embed)
+            Webhook(webhook).send(embed=embed)
             
         except:
             
@@ -993,7 +992,17 @@ def get_collection_symbol(url):
 
     return split_url.path.split("/")[-1]
 
-    
+
+def run_websocket():
+        
+    while True:
+                            
+        ws.run_forever()
+
+        if kill_websocket:
+            
+            return
+        
 def get_me_collection_metadata(symbol: str):
 
     last_listed = MagicEden.get_listed_nfts(
@@ -1152,7 +1161,7 @@ def monitor_me_sniper_file(file_name: str):
     
     [None, None]
     
-    global sniper_data, kill_sniper, current_floors
+    global sniper_data, kill_sniper
     
     [None, None]
 
@@ -1169,7 +1178,7 @@ def monitor_me_sniper_file(file_name: str):
                 reader = list(reader)
                 
             keys = reader[0]
-            rows = reader[1:30]
+            rows = reader[1:25]
             
             if not rows and sniper_start:
                 
@@ -1187,21 +1196,12 @@ def monitor_me_sniper_file(file_name: str):
                 
                 if sniper_data_raw["Collection"]:
                     
-                    if sniper_data_raw["MinPrice"] and sniper_data_raw["MaxPrice"]:
-
-                        sniper_data_raw["MinPrice"] = float(sniper_data_raw["MinPrice"])
-                        sniper_data_raw["MaxPrice"] = float(sniper_data_raw["MaxPrice"])
-
-                        sniper_data_raw["UnderFloor(%)"] = None
-                        
-                    elif sniper_data_raw["UnderFloor(%)"]:
-
-                        sniper_data_raw["UnderFloor(%)"] = float(sniper_data_raw["UnderFloor(%)"])
-
-                        sniper_data_raw["MinPrice"] = None
-                        sniper_data_raw["MaxPrice"] = None
-                        
-                    else:
+                    sniper_data_raw["MinPrice"] = float(sniper_data_raw["MinPrice"]) if sniper_data_raw["MinPrice"] else None
+                    sniper_data_raw["MaxPrice"] = float(sniper_data_raw["MaxPrice"]) if sniper_data_raw["MaxPrice"] else None
+                    
+                    sniper_data_raw["UnderFloor(%)"] = float(sniper_data_raw["UnderFloor(%)"]) if sniper_data_raw["UnderFloor(%)"] else None
+                    
+                    if not (sniper_data_raw["MinPrice"] and sniper_data_raw["MaxPrice"]) and not sniper_data_raw["UnderFloor(%)"]:
 
                         raise ValueError
                                                 
@@ -1244,7 +1244,7 @@ def monitor_cc_sniper_file(file_name: str):
     
     [None, None]
     
-    global sniper_data, kill_sniper, current_floors
+    global sniper_data, kill_sniper
     
     [None, None]
 
@@ -1261,7 +1261,7 @@ def monitor_cc_sniper_file(file_name: str):
                 reader = list(reader)
                 
             keys = reader[0]
-            rows = reader[1:30]
+            rows = reader[1:25]
             
             if not rows and sniper_start:
                 
@@ -1280,21 +1280,12 @@ def monitor_cc_sniper_file(file_name: str):
                 
                 if sniper_data_raw["Collection"]:
                     
-                    if sniper_data_raw["MinPrice"] and sniper_data_raw["MaxPrice"]:
-
-                        sniper_data_raw["MinPrice"] = float(sniper_data_raw["MinPrice"])
-                        sniper_data_raw["MaxPrice"] = float(sniper_data_raw["MaxPrice"])
-
-                        sniper_data_raw["UnderFloor(%)"] = None
-                        
-                    elif sniper_data_raw["UnderFloor(%)"]:
-
-                        sniper_data_raw["UnderFloor(%)"] = float(sniper_data_raw["UnderFloor(%)"])
-
-                        sniper_data_raw["MinPrice"] = None
-                        sniper_data_raw["MaxPrice"] = None
-                        
-                    else:
+                    sniper_data_raw["MinPrice"] = float(sniper_data_raw["MinPrice"]) if sniper_data_raw["MinPrice"] else None
+                    sniper_data_raw["MaxPrice"] = float(sniper_data_raw["MaxPrice"]) if sniper_data_raw["MaxPrice"] else None
+                    
+                    sniper_data_raw["UnderFloor(%)"] = float(sniper_data_raw["UnderFloor(%)"]) if sniper_data_raw["UnderFloor(%)"] else None
+                    
+                    if not (sniper_data_raw["MinPrice"] and sniper_data_raw["MaxPrice"]) and not sniper_data_raw["UnderFloor(%)"]:
 
                         raise ValueError
                                                 
@@ -1332,7 +1323,7 @@ def monitor_cc_sniper_file(file_name: str):
             
         time.sleep(0.5)
         
-def show_me_collection_current_floor(symbol: str):
+def save_me_collection_current_floor(symbol: str):
     
     global current_floors
     
@@ -1342,20 +1333,18 @@ def show_me_collection_current_floor(symbol: str):
             symbol=symbol,
             limit=3
         )
-        
+
         if last_listed:
         
             floor = last_listed[0]["price"]
-            
-            console.print(logger(f"{status} [yellow]Current floor[/] [white]{symbol}[/] [purple]>[/] [cyan]{floor} SOL[/]"))
-            
+                        
             current_floors[symbol] = floor
                 
     except:
-        
+                
         pass
 
-def show_cc_collection_current_floor(symbol: str):
+def save_cc_collection_current_floor(symbol: str):
     
     global current_floors
     
@@ -1369,9 +1358,7 @@ def show_cc_collection_current_floor(symbol: str):
         if last_listed:
         
             floor = lamports_to_sol(last_listed[0]["price"])
-            
-            console.print(logger(f"{status} [yellow]Current floor[/] [white]{symbol}[/] [purple]>[/] [cyan]{floor} SOL[/]"))
-            
+                        
             current_floors[symbol] = floor
                 
     except:
@@ -1391,7 +1378,7 @@ def monitor_me_collection_floor():
                 symbol = collection["Collection"]
                 
                 showFloorT = Thread(
-                    target=show_me_collection_current_floor,
+                    target=save_me_collection_current_floor,
                     args=[symbol],
                     daemon=True
                 )
@@ -1420,7 +1407,7 @@ def monitor_cc_collection_floor():
                 symbol = collection["Collection"]
                 
                 showFloorT = Thread(
-                    target=show_cc_collection_current_floor,
+                    target=save_cc_collection_current_floor,
                     args=[symbol],
                     daemon=True
                 )
@@ -1974,7 +1961,7 @@ try:
     
     import helheim
     
-    helheim.auth(Keys.CF_API_KEY)
+    helheim.auth(Keys.HELHEIM_API_KEY)
     
     helheim_auth = True
     
@@ -2269,10 +2256,11 @@ while True:
                 current_floors = {}
                 
                 cached_collections = {}
+                loaded_collections = {}
                 
-                current_txs = []
-                until_tx = None
-                                
+                ws_rpc = get_websocket_url(snipe_rpc)
+                kill_websocket = False
+                
                 privkey = wallet["privkey"]
                 tasks = wallet["tasks"]
                 pubkey = wallet["address"]
@@ -2296,246 +2284,265 @@ while True:
                     rpc=snipe_rpc,
                     privkey=privkey,
                 )
-                
-                console.print(logger(f"[SNIPER] [cyan][COLLECTIONS ~ 0][/] [yellow]Loading file data and initialazing...[/]"))
-                
-                for _ in range(tasks):
 
-                    while True:
-                                                
-                        if kill_sniper:
+                console.print(logger(f"[SNIPER] [cyan][COLLECTIONS ~ {len(loaded_collections)}][/] [yellow]Loading file data and initialazing...[/]"))
+                
+                def check_me_tx_and_purchase(tx: dict):
+                            
+                    global tasks
+                    
+                    status = f"[SNIPER] [cyan][COLLECTIONS ~ {len(loaded_collections)}][/]"
+
+                    listing_data = magic_eden.check_tx_is_listing(tx["signature"])
+                    
+                    if not listing_data or kill_sniper:
+                        
+                        return
+                                    
+                    console.print(logger(f"{status} [yellow]Fetching new data...[/]"))
+
+                    mint_address = listing_data["mint"]
+                    seller = listing_data["seller"]
+                    price_in_sol = lamports_to_sol(listing_data["price"])
+                    price_in_lamports = listing_data["price"]
+                    escrow_pubkey = listing_data["escrow"]
+                    
+                    nft_metadata = get_nft_metadata(mint_key=mint_address, rpc=mint_rpc)
+                    
+                    if not nft_metadata:
+                        
+                        console.print(logger(f"{status} [red]Unable to get NFT data (node)[/]"))
+                        
+                        return
+                
+                    nft_name = nft_metadata["data"]["name"]
+                    nft_creators = nft_metadata["data"]["creators"]
+                    nft_update_auth = nft_metadata["update_authority"]
+                    nft_uri = nft_metadata["data"]["uri"]
+
+                    to_match_identifier = "".join(nft_creators + [nft_update_auth])
+                    
+                    if to_match_identifier not in loaded_collections.keys():
+                        
+                        return
+                                            
+                    to_match_symbol = loaded_collections[to_match_identifier]
+                    
+                    matching_listing = False
+
+                    for collection in sniper_data:
+                        
+                        if collection["Collection"] == to_match_symbol:
+                            
+                            min_sol = collection["MinPrice"]
+                            max_sol = collection["MaxPrice"]
+                            under_floor = collection["UnderFloor(%)"]
+                            min_rank = collection["MinRank"]
+                            max_rank = collection["MaxRank"]
+                            autolist_by_price = collection["AutoListByPrice(%)"]
+                            autolist_by_floor = collection["AutoListByFloor(%)"]
+                            attributes = collection["Attributes"]
+                            collection_floor = collection["Floor"]
+                                
+                            matching_listing = True
                             
                             break
-                        
-                        if sniper_data:
-                            
-                            loaded_collections = {}
-
-                            for collection in sniper_data:
-                                
-                                symbol = collection["Collection"]
-                                
-                                if symbol not in cached_collections.values():
-                                    
-                                    collection_metadata = get_me_collection_metadata(symbol=symbol)
-
-                                    if collection_metadata:
-                                        
-                                        collection_creators = collection_metadata["creators"]
-                                        collection_update_auth = collection_metadata["updateAuthority"]
-                                        
-                                        collection_identifier = "".join(collection_creators + [collection_update_auth])
-                                        
-                                        loaded_collections[collection_identifier] = symbol
-                                        cached_collections[collection_identifier] = symbol
-                                        
-                                        sniper_start = True
-                                else:
-                                    
-                                    collection_identifier = list(cached_collections.keys())[list(cached_collections.values()).index(symbol)]
-                                    loaded_collections[collection_identifier] = symbol
-                                                        
-                            status = f"[SNIPER] [cyan][COLLECTIONS ~ {len(loaded_collections)}][/]"
-                            
-                            last_txs = get_last_account_txs(
-                                rpc=snipe_rpc,
-                                account="1BWutmTvYPwDtmw9abTkS4Ssr8no61spGAvW1X6NDix", 
-                                limit=10, 
-                                commitment="confirmed",
-                                until=until_tx
-                            )
-                                                        
-                            ready_to_purchase = False
-                            
-                            if last_txs:
-                                
-                                for tx in last_txs:
-                                    
-                                    signature = tx["signature"]
-                                    
-                                    if signature not in current_txs:
-
-                                        current_txs.append(signature)
-                                        
-                                        console.print(logger(f"{status} [yellow]Fetching new data...[/]"))
-                                        
-                                        listing_info = magic_eden.check_tx_is_listing(tx=signature)
-                                                                                
-                                        if listing_info:
-                                            
-                                            mint_address = listing_info["mint"]
-                                            seller = listing_info["seller"]
-                                            price_in_sol = lamports_to_sol(listing_info["price"])
-                                            price_in_lamports = listing_info["price"]
-                                            escrow_pubkey = listing_info["escrow"]
-                                            
-                                            nft_metadata = get_nft_metadata(mint_key=mint_address, rpc=mint_rpc)
-                                            
-                                            if nft_metadata:
-                                                
-                                                nft_name = nft_metadata["data"]["name"]
-                                                nft_creators = nft_metadata["data"]["creators"]
-                                                nft_update_auth = nft_metadata["update_authority"]
-                                                nft_uri = nft_metadata["data"]["uri"]
-
-                                                to_match_identifier = "".join(nft_creators + [nft_update_auth])
-                                                
-                                                if to_match_identifier in loaded_collections.keys():
-                                                                                                        
-                                                    to_match_symbol = loaded_collections[to_match_identifier]
-                                                    
-                                                    matching_listing = False
-
-                                                    for collection in sniper_data:
-                                                        
-                                                        if collection["Collection"] == to_match_symbol:
-                                                            
-                                                            min_sol = collection["MinPrice"]
-                                                            max_sol = collection["MaxPrice"]
-                                                            under_floor = collection["UnderFloor(%)"]
-                                                            min_rank = collection["MinRank"]
-                                                            max_rank = collection["MaxRank"]
-                                                            autolist_by_price = collection["AutoListByPrice(%)"]
-                                                            autolist_by_floor = collection["AutoListByFloor(%)"]
-                                                            attributes = collection["Attributes"]
-                                                            collection_floor = collection["Floor"]
-                                                                
-                                                            matching_listing = True
-                                                            
-                                                            break
-                                                
-                                                    if matching_listing:
-                                                        
-                                                        valid_listing = None
-                                                        
-                                                        if min_sol is not None and max_sol is not None:
-                                                            
-                                                            valid_listing = min_sol <= price_in_sol <= max_sol
-                                                                             
-                                                        if (valid_listing or valid_listing is None) and under_floor is not None and collection_floor is not None:
-                                                            
-                                                            max_possible_price = collection_floor - (collection_floor * (under_floor/100))
-                                                                
-                                                            valid_listing = price_in_sol <= max_possible_price
-                                                                
-                                                        if valid_listing:
-                                                                                                                        
-                                                            console.print(logger(f"{status} [yellow]Found possible NFT[/] [purple]>[/] [yellow]{nft_name}[/]"))
-                                                            
-                                                            if attributes or (min_rank is not None and max_rank is not None):
-                                                                
-                                                                nft_marketplace_data = CoralCube.get_nft_data(mint=mint_address)
-                                                                
-                                                                if nft_marketplace_data:
-                                                                    
-                                                                    is_valid_snipe = validate_cc_purchase_results(
-                                                                        nft_marketplace_data, 
-                                                                        filters=attributes,
-                                                                        min_rank=min_rank,
-                                                                        max_rank=max_rank
-                                                                    )
-                                                                    
-                                                                    if is_valid_snipe:
-                                                                        
-                                                                        ready_to_purchase = True
-                                                                        
-                                                                        break
-                                                                    
-                                                                    else:
-                                    
-                                                                        console.print(logger(f"{status} [red]Rank or attributes do not match[/]"))
-                                                                else:
-                                                                    
-                                                                    console.print(logger(f"{status} [red]Unable to get NFT data[/]"))
-                                                            
-                                                            else:
-                                                                
-                                                                ready_to_purchase = True
-                                                                
-                                                                break
-                                                            
-                                            else:
-                                                
-                                                console.print(logger(f"{status} [red]Unable to get NFT data (node)[/]"))
-                                                
-                                if len(current_txs) >= 500:
-
-                                    current_txs = current_txs[-30:]
-
-                                until_tx = last_txs[0]["signature"]
-                                
-                            elif last_txs is None:
-                                    
-                                console.print(logger(f"{status} [red]Unable to fetch new data (node)[/]"))
-                                    
-                            if ready_to_purchase:
-                                                        
-                                console.print(logger(f"{status} [yellow]Sniped {nft_name}[/] [purple]>[/] [cyan]{price_in_sol} SOL[/]"))
-                    
-                                console.print(logger(f"{status} [yellow]Purchasing...[/]"))
-                                
-                                tx_hash = magic_eden.buy_nft_api(
-                                    seller=seller,
-                                    price=price_in_lamports,
-                                    mint=mint_address
-                                )
-
-                                if tx_hash:
-
-                                    console.print(logger(f"{status} [green]Purchased {nft_name}[/] [purple]>[/] [cyan]{price_in_sol} SOL[/]"))
-                                    
-                                    send_sniper_webhook(
-                                        mint=mint_address,
-                                        tx=tx_hash,
-                                        price=price_in_sol,
-                                        webhook=success_webhook or None
-                                    )
-                                    
-                                    if autolist_by_floor is not None or autolist_by_price is not None:
-                                        
-                                        listing_price = None
-                                        
-                                        if autolist_by_price is not None:
-
-                                            listing_price = (price_in_sol + (price_in_sol * autolist_by_price/100))
-                                                
-                                        elif autolist_by_floor is not None and collection_floor:
-                                                                                                
-                                            listing_price = (collection_floor + (collection_floor * autolist_by_floor/100))
-                                        
-                                        if listing_price:
-                                            
-                                            listing_price = round(listing_price, 3)
-                                            
-                                            console.print(logger(f"{status} [yellow]Listing {nft_name}[/] [purple]>[/] [cyan]{listing_price} SOL[/]"))
-                                                    
-                                            tx_hash = magic_eden.list_nft(
-                                                mint=mint_address,
-                                                price=sol_to_lamports(listing_price)
-                                            )
-                                            
-                                            if tx_hash:
-                                                                
-                                                console.print(logger(f"{status} [green]Listed {nft_name}[/] [purple]>[/] [cyan]{listing_price} SOL[/]"))
-
-                                            else:
-                                                
-                                                console.print(logger(f"{status} [red]Unable to list {nft_name}[/]"))
-                                    
-                                    break
-
-                                else:
-
-                                    console.print(logger(f"{status} [red]Purchase failed[/]"))
                 
-                    if kill_sniper:
+                    if not matching_listing:
+                        
+                        return
+                    
+                    valid_listing = None
+                    
+                    if min_sol is not None and max_sol is not None:
+                        
+                        valid_listing = min_sol <= price_in_sol <= max_sol
+                                            
+                    if (valid_listing is not False) and under_floor is not None and collection_floor is not None:
+                        
+                        max_possible_price = collection_floor - (collection_floor * (under_floor/100))
+                            
+                        valid_listing = price_in_sol <= max_possible_price
+                            
+                    if not valid_listing:
+                        
+                        return
+                                                            
+                    console.print(logger(f"{status} [yellow]Found possible NFT[/] [purple]>[/] [yellow]{nft_name}[/]"))
+                    
+                    if attributes or (min_rank is not None and max_rank is not None):
+                        
+                        nft_marketplace_data = CoralCube.get_nft_data(mint=mint_address)
+                        
+                        if nft_marketplace_data:
+                            
+                            is_valid_snipe = validate_cc_purchase_results(
+                                nft_marketplace_data, 
+                                filters=attributes,
+                                min_rank=min_rank,
+                                max_rank=max_rank
+                            )
+                            
+                            if not is_valid_snipe:
+                                
+                                console.print(logger(f"{status} [red]Rank or attributes do not match[/]"))
+                                
+                                return
+
+                        else:
+                            
+                            console.print(logger(f"{status} [red]Unable to get NFT data[/]"))
+                            
+                            return
+
+                                            
+                    console.print(logger(f"{status} [yellow]Sniped {nft_name}[/] [purple]>[/] [cyan]{price_in_sol} SOL[/]"))
+        
+                    console.print(logger(f"{status} [yellow]Purchasing...[/]"))
+                    
+                    tx_hash = magic_eden.buy_nft_api(
+                        seller=seller,
+                        price=price_in_lamports,
+                        mint=mint_address
+                    )
+
+                    if not tx_hash:
+                        
+                        console.print(logger(f"{status} [red]Purchase failed[/]"))
+
+                        return
+                    
+                    console.print(logger(f"{status} [green]Purchased {nft_name}[/] [purple]>[/] [cyan]{price_in_sol} SOL[/]"))
+                    
+                    tasks -= 1
+                    
+                    send_sniper_webhook(
+                        mint=mint_address,
+                        tx=tx_hash,
+                        price=price_in_sol,
+                        webhook=success_webhook
+                    )
+                    
+                    if autolist_by_floor is not None or autolist_by_price is not None:
+                        
+                        listing_price = None
+                        
+                        if autolist_by_price is not None:
+
+                            listing_price = (price_in_sol + (price_in_sol * autolist_by_price/100))
+                                
+                        elif autolist_by_floor is not None and collection_floor:
+                                                                                
+                            listing_price = (collection_floor + (collection_floor * autolist_by_floor/100))
+                        
+                        if listing_price:
+                            
+                            listing_price = round(listing_price, 3)
+                            
+                            console.print(logger(f"{status} [yellow]Listing {nft_name}[/] [purple]>[/] [cyan]{listing_price} SOL[/]"))
+                                    
+                            tx_hash = magic_eden.list_nft(
+                                mint=mint_address,
+                                price=sol_to_lamports(listing_price)
+                            )
+                            
+                            if tx_hash:
+                                                
+                                console.print(logger(f"{status} [green]Listed {nft_name}[/] [purple]>[/] [cyan]{listing_price} SOL[/]"))
+
+                            else:
+                                
+                                console.print(logger(f"{status} [red]Unable to list {nft_name}[/]"))
+                
+                def on_open_me(ws: websocket.WebSocket):
+
+                    ws.send(json.dumps(
+                        {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "logsSubscribe",
+                        "params": [
+                            {
+                            "mentions": [ "M2mx93ekt1fmXSVkTrUL9xVFHkmME8HTUi5Cyc5aF7K" ]
+                            },
+                            {
+                            "commitment": "confirmed"
+                            }
+                        ]
+                        }
+                    ))
+                
+                def on_message_me(_, msg):
+                                        
+                    if not sniper_start or not tasks:
+                        
+                        return 
+                    
+                    tx = json.loads(msg)["params"]["result"]["value"]
+
+                    logs = "".join(tx["logs"])
+                    
+                    if not tx["err"] and "Instruction: Sell" in logs:
+                        
+                        snipeT = Thread(
+                            target=check_me_tx_and_purchase,
+                            args=[tx],
+                            daemon=True
+                        )
+                        
+                        snipeT.start()
+                                    
+                ws = websocket.WebSocketApp(url=ws_rpc, on_open=on_open_me, on_message=on_message_me)
+
+                wsT = Thread(
+                    target=run_websocket,
+                    daemon=True
+                )
+
+                wsT.start()
+                
+                while True:
+                                            
+                    if kill_sniper or not tasks:
+                        
+                        kill_websocket = True
+                        kill_sniper = True
+                        
+                        ws.close()
                         
                         break
-                
-                kill_sniper = True
+                    
+                    if sniper_data:
                         
-                console.input(
-                    "\n\n [purple]>>[/] Press ENTER to exit ", password=True)
+                        updated_collections = {}
+                        
+                        for collection in sniper_data:
+                            
+                            symbol = collection["Collection"]
+                            
+                            if symbol not in cached_collections.values():
+                                
+                                collection_metadata = get_me_collection_metadata(symbol=symbol)
+
+                                if collection_metadata:
+                                    
+                                    collection_creators = collection_metadata["creators"]
+                                    collection_update_auth = collection_metadata["updateAuthority"]
+                                    
+                                    collection_identifier = "".join(collection_creators + [collection_update_auth])
+                                    
+                                    updated_collections[collection_identifier] = symbol
+                                    cached_collections[collection_identifier] = symbol
+                                    
+                                    sniper_start = True
+                            else:
+                                
+                                collection_identifier = list(cached_collections.keys())[list(cached_collections.values()).index(symbol)]
+                                updated_collections[collection_identifier] = symbol
+                        
+                        loaded_collections = updated_collections
+                        
+                console.input("\n\n [purple]>>[/] Press ENTER to exit ", password=True)
 
                 menu = True
 
@@ -2581,7 +2588,7 @@ while True:
                                                         
                             if operation_type in ["l", "ts", "tn", "b"]:
 
-                                if nft.get("collectionName") or nft["onChainCollection"].get("key") or operation_type == "b":
+                                if nft.get("collectionName") or (nft.get("onChainCollection") and nft["onChainCollection"].get("key")) or operation_type == "b":
                                     
                                     nfts_data.append(
                                         {
@@ -3008,15 +3015,15 @@ while True:
                                                 
                         if amount is not None:
                             
-                            status = status = f"[SWEEPER] [cyan][{symbol.upper()}] [AMOUNT ~ {amount}][/]"
+                            status = f"[SWEEPER] [cyan][{symbol.upper()}] [AMOUNT ~ {amount}][/]"
                         
                         elif max_funds is not None:
                             
-                            status = status = f"[SWEEPER] [cyan][{symbol.upper()}] [FUNDS ~ {max_funds} SOL][/]"
+                            status = f"[SWEEPER] [cyan][{symbol.upper()}] [FUNDS ~ {max_funds} SOL][/]"
                         
                         elif under_price is not None:
                             
-                            status = status = f"[SWEEPER] [cyan][{symbol.upper()}] [MAX PRICE ~ {under_price} SOL][/]"
+                            status = f"[SWEEPER] [cyan][{symbol.upper()}] [MAX PRICE ~ {under_price} SOL][/]"
                             
                         if min_rank is not None and max_rank is not None:
                                             
@@ -3372,10 +3379,11 @@ while True:
                 current_floors = {}
                 
                 cached_collections = {}
+                loaded_collections = {}
                 
-                current_txs = []
-                until_tx = None
-                                
+                ws_rpc = get_websocket_url(snipe_rpc)
+                kill_websocket = False
+                
                 privkey = wallet["privkey"]
                 tasks = wallet["tasks"]
                 pubkey = wallet["address"]
@@ -3399,244 +3407,266 @@ while True:
                     rpc=snipe_rpc,
                     privkey=privkey,
                 )
-                
-                console.print(logger(f"[SNIPER] [cyan][COLLECTIONS ~ 0][/] [yellow]Loading file data and initialazing...[/]"))
-                
-                for _ in range(tasks):
 
-                    while True:
-                                                
-                        if kill_sniper:
+                console.print(logger(f"[SNIPER] [cyan][COLLECTIONS ~ {len(loaded_collections)}][/] [yellow]Loading file data and initialazing...[/]"))
+                
+                def check_cc_tx_and_purchase(tx: dict):
+                            
+                    global tasks
+                    
+                    status = f"[SNIPER] [cyan][COLLECTIONS ~ {len(loaded_collections)}][/]"
+
+                    listing_data = coral_cube.check_tx_is_listing(tx["signature"])
+                    
+                    if not listing_data or kill_sniper:
+                        
+                        return
+                                    
+                    console.print(logger(f"{status} [yellow]Fetching new data...[/]"))
+
+                    mint_address = listing_data["mint"]
+                    seller = listing_data["seller"]
+                    price_in_sol = lamports_to_sol(listing_data["price"])
+                    price_in_lamports = listing_data["price"]
+                    escrow_pubkey = listing_data["escrow"]
+                    
+                    nft_metadata = get_nft_metadata(mint_key=mint_address, rpc=mint_rpc)
+                    
+                    if not nft_metadata:
+                        
+                        console.print(logger(f"{status} [red]Unable to get NFT data (node)[/]"))
+                        
+                        return
+                
+                    nft_name = nft_metadata["data"]["name"]
+                    nft_creators = nft_metadata["data"]["creators"]
+                    nft_update_auth = nft_metadata["update_authority"]
+                    nft_uri = nft_metadata["data"]["uri"]
+
+                    to_match_identifier = "".join(nft_creators + [nft_update_auth])
+                    
+                    if to_match_identifier not in loaded_collections.keys():
+                        
+                        return
+                                            
+                    to_match_symbol = loaded_collections[to_match_identifier]
+                    
+                    matching_listing = False
+
+                    for collection in sniper_data:
+                        
+                        if collection["Collection"] == to_match_symbol:
+                            
+                            min_sol = collection["MinPrice"]
+                            max_sol = collection["MaxPrice"]
+                            under_floor = collection["UnderFloor(%)"]
+                            min_rank = collection["MinRank"]
+                            max_rank = collection["MaxRank"]
+                            autolist_by_price = collection["AutoListByPrice(%)"]
+                            autolist_by_floor = collection["AutoListByFloor(%)"]
+                            attributes = collection["Attributes"]
+                            collection_floor = collection["Floor"]
+                                
+                            matching_listing = True
                             
                             break
+                
+                    if not matching_listing:
                         
-                        if sniper_data:
-
-                            loaded_collections = {}
-
-                            for collection in sniper_data:
-                                
-                                symbol = collection["Collection"]
-                                
-                                if symbol not in cached_collections.values():
-                                    
-                                    collection_metadata = get_cc_collection_metadata(symbol=symbol)
-
-                                    if collection_metadata:
-                                        
-                                        collection_creators = collection_metadata["creators"]
-                                        collection_update_auth = collection_metadata["updateAuthority"]
-                                        
-                                        collection_identifier = "".join(collection_creators + [collection_update_auth])
-                                        
-                                        loaded_collections[collection_identifier] = symbol
-                                        cached_collections[collection_identifier] = symbol
-                                        
-                                        sniper_start = True
-                                else:
-                                    
-                                    collection_identifier = list(cached_collections.keys())[list(cached_collections.values()).index(symbol)]
-                                    loaded_collections[collection_identifier] = symbol
-                                                        
-                            status = f"[SNIPER] [cyan][COLLECTIONS ~ {len(loaded_collections)}][/]"
+                        return
+                    
+                    valid_listing = None
+                    
+                    if min_sol is not None and max_sol is not None:
+                        
+                        valid_listing = min_sol <= price_in_sol <= max_sol
+                                            
+                    if (valid_listing is not False) and under_floor is not None and collection_floor is not None:
+                        
+                        max_possible_price = collection_floor - (collection_floor * (under_floor/100))
                             
-                            last_txs = get_last_account_txs(
-                                rpc=snipe_rpc,
-                                account="29xtkHHFLUHXiLoxTzbC7U8kekTwN3mVQSkfXnB1sQ6e", 
-                                limit=10, 
-                                commitment="confirmed",
-                                until=until_tx
+                        valid_listing = price_in_sol <= max_possible_price
+                            
+                    if not valid_listing:
+                        
+                        return
+                                                            
+                    console.print(logger(f"{status} [yellow]Found possible NFT[/] [purple]>[/] [yellow]{nft_name}[/]"))
+                    
+                    if attributes or (min_rank is not None and max_rank is not None):
+                        
+                        nft_marketplace_data = CoralCube.get_nft_data(mint=mint_address)
+                        
+                        if nft_marketplace_data:
+                            
+                            is_valid_snipe = validate_cc_purchase_results(
+                                nft_marketplace_data, 
+                                filters=attributes,
+                                min_rank=min_rank,
+                                max_rank=max_rank
                             )
                             
-                            ready_to_purchase = False
+                            if not is_valid_snipe:
+                                
+                                console.print(logger(f"{status} [red]Rank or attributes do not match[/]"))
+                                
+                                return
+
+                        else:
                             
-                            if last_txs:
+                            console.print(logger(f"{status} [red]Unable to get NFT data[/]"))
+                            
+                            return
+
+                                            
+                    console.print(logger(f"{status} [yellow]Sniped {nft_name}[/] [purple]>[/] [cyan]{price_in_sol} SOL[/]"))
+        
+                    console.print(logger(f"{status} [yellow]Purchasing...[/]"))
+                    
+                    tx_hash = coral_cube.buy_nft(
+                        seller=seller,
+                        price=price_in_lamports,
+                        mint=mint_address,
+                        creators=nft_creators
+                    )
+
+                    if not tx_hash:
+                        
+                        console.print(logger(f"{status} [red]Purchase failed[/]"))
+
+                        return
+                    
+                    console.print(logger(f"{status} [green]Purchased {nft_name}[/] [purple]>[/] [cyan]{price_in_sol} SOL[/]"))
+                    
+                    tasks -= 1
+                    
+                    send_sniper_webhook(
+                        mint=mint_address,
+                        tx=tx_hash,
+                        price=price_in_sol,
+                        webhook=success_webhook
+                    )
+                    
+                    if autolist_by_floor is not None or autolist_by_price is not None:
+                        
+                        listing_price = None
+                        
+                        if autolist_by_price is not None:
+
+                            listing_price = (price_in_sol + (price_in_sol * autolist_by_price/100))
                                 
-                                for tx in last_txs:
+                        elif autolist_by_floor is not None and collection_floor:
+                                                                                
+                            listing_price = (collection_floor + (collection_floor * autolist_by_floor/100))
+                        
+                        if listing_price:
+                            
+                            listing_price = round(listing_price, 3)
+                            
+                            console.print(logger(f"{status} [yellow]Listing {nft_name}[/] [purple]>[/] [cyan]{listing_price} SOL[/]"))
                                     
-                                    signature = tx["signature"]
-                                    
-                                    if signature not in current_txs:
+                            tx_hash = coral_cube.list_nft(
+                                mint=mint_address,
+                                price=sol_to_lamports(listing_price)
+                            )
+                            
+                            if tx_hash:
+                                                
+                                console.print(logger(f"{status} [green]Listed {nft_name}[/] [purple]>[/] [cyan]{listing_price} SOL[/]"))
 
-                                        current_txs.append(signature)
-                                        
-                                        console.print(logger(f"{status} [yellow]Fetching new data...[/]"))
-                                        
-                                        listing_info = coral_cube.check_tx_is_listing(tx=signature)
-                                        
-                                        if listing_info:
-                                                                                    
-                                            mint_address = listing_info["mint"]
-                                            seller = listing_info["seller"]
-                                            price_in_sol = lamports_to_sol(listing_info["price"])
-                                            price_in_lamports = listing_info["price"]
-                                            
-                                            nft_metadata = get_nft_metadata(mint_key=mint_address, rpc=mint_rpc)
-                                            
-                                            if nft_metadata:
-                                                
-                                                nft_name = nft_metadata["data"]["name"]
-                                                nft_creators = nft_metadata["data"]["creators"]
-                                                nft_update_auth = nft_metadata["update_authority"]
-                                                
-                                                to_match_identifier = "".join(nft_creators + [nft_update_auth])
-                                                
-                                                if to_match_identifier in loaded_collections.keys():
-                                                                                                        
-                                                    to_match_symbol = loaded_collections[to_match_identifier]
-                                                    
-                                                    matching_listing = False
-
-                                                    for collection in sniper_data:
-                                                        
-                                                        if collection["Collection"] == to_match_symbol:
-                                                            
-                                                            min_sol = collection["MinPrice"]
-                                                            max_sol = collection["MaxPrice"]
-                                                            under_floor = collection["UnderFloor(%)"]
-                                                            min_rank = collection["MinRank"]
-                                                            max_rank = collection["MaxRank"]
-                                                            autolist_by_price = collection["AutoListByPrice(%)"]
-                                                            autolist_by_floor = collection["AutoListByFloor(%)"]
-                                                            attributes = collection["Attributes"]
-                                                            collection_floor = collection["Floor"]
-                                                                
-                                                            matching_listing = True
-                                                            
-                                                            break
-                                                
-                                                    if matching_listing:
-                                                        
-                                                        valid_listing = None
-                                                        
-                                                        if min_sol is not None and max_sol is not None:
-                                                            
-                                                            valid_listing = min_sol <= price_in_sol <= max_sol
-                                                                             
-                                                        if (valid_listing or valid_listing is None) and under_floor is not None and collection_floor is not None:
-                                                            
-                                                            max_possible_price = collection_floor - (collection_floor * (under_floor/100))
-                                                                
-                                                            valid_listing = price_in_sol <= max_possible_price
-                                                            
-                                                        if valid_listing:
-                                                                                                                        
-                                                            console.print(logger(f"{status} [yellow]Found possible NFT[/] [purple]>[/] [yellow]{nft_name}[/]"))
-                                                            
-                                                            if attributes or (min_rank is not None and max_rank is not None):
-                                                                
-                                                                nft_marketplace_data = CoralCube.get_nft_data(mint=mint_address)
-                                                                
-                                                                if nft_marketplace_data:
-                                                                    
-                                                                    is_valid_snipe = validate_cc_purchase_results(
-                                                                        nft_marketplace_data, 
-                                                                        filters=attributes,
-                                                                        min_rank=min_rank,
-                                                                        max_rank=max_rank
-                                                                    )
-                                                                    
-                                                                    if is_valid_snipe:
-                                                                        
-                                                                        ready_to_purchase = True
-                                                                        
-                                                                        break
-                                                                    
-                                                                    else:
-                                    
-                                                                        console.print(logger(f"{status} [red]Rank or attributes do not match[/]"))
-                                                                else:
-                                                                    
-                                                                    console.print(logger(f"{status} [red]Unable to get NFT data[/]"))
-                                                            else:
-                                                                
-                                                                ready_to_purchase = True
-                                                                
-                                                                break
-                                            else:
-                                                
-                                                console.print(logger(f"{status} [red]Unable to get NFT data (node)[/]"))
-                                                
-                                if len(current_txs) >= 500:
-
-                                    current_txs = current_txs[-30:]
-
-                                until_tx = last_txs[0]["signature"]
+                            else:
                                 
-                            elif last_txs is None:
-                                    
-                                console.print(logger(f"{status} [red]Unable to fetch new data (node)[/]"))
-                                    
-                            if ready_to_purchase:
-                                                
-                                console.print(logger(f"{status} [yellow]Sniped {nft_name}[/] [purple]>[/] [cyan]{price_in_sol} SOL[/]"))
-                                        
-                                console.print(logger(f"{status} [yellow]Purchasing...[/]"))
-                                
-                                tx_hash = coral_cube.buy_nft(
-                                    seller=seller,
-                                    mint=mint_address,
-                                    price=price_in_lamports,
-                                    creators=nft_creators
-                                )
-
-                                if tx_hash:
-
-                                    console.print(logger(f"{status} [green]Purchased {nft_name}[/] [purple]>[/] [cyan]{price_in_sol} SOL[/]"))
-
-                                    send_sniper_webhook(
-                                        mint=mint_address,
-                                        tx=tx_hash,
-                                        price=price_in_sol,
-                                        webhook=success_webhook or None
-                                    )
-                                    
-                                    if autolist_by_floor is not None or autolist_by_price is not None:
-                                        
-                                        listing_price = None
-                                        
-                                        if autolist_by_price is not None:
-
-                                            listing_price = (price_in_sol + (price_in_sol * autolist_by_price/100))
-                                                
-                                        elif autolist_by_floor is not None and collection_floor:
-                                                                                                
-                                            listing_price = (collection_floor + (collection_floor * autolist_by_floor/100))
-                                        
-                                        if listing_price:
-                                            
-                                            listing_price = round(listing_price, 3)
-                                            
-                                            console.print(logger(f"{status} [yellow]Listing {nft_name}[/] [purple]>[/] [cyan]{listing_price} SOL[/]"))
-                                            
-                                            tx_hash = coral_cube.list_nft(
-                                                seller=pubkey,
-                                                mint=mint_address,
-                                                price=sol_to_lamports(listing_price)
-                                            )
-                                            
-                                            if tx_hash:
-                                                                
-                                                console.print(logger(f"{status} [green]Listed {nft_name}[/] [purple]>[/] [cyan]{listing_price} SOL[/]"))
-
-                                            else:
-                                                
-                                                console.print(logger(f"{status} [red]Unable to list {nft_name}[/]"))
-                                        
-                                    break
-
-                                else:
-
-                                    console.print(logger(f"{status} [red]Purchase failed[/]"))
+                                console.print(logger(f"{status} [red]Unable to list {nft_name}[/]"))
                 
-                    if kill_sniper:
+                def on_open_cc(ws: websocket.WebSocket):
+
+                    ws.send(json.dumps(
+                        {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "logsSubscribe",
+                        "params": [
+                            {
+                            "mentions": [ "29xtkHHFLUHXiLoxTzbC7U8kekTwN3mVQSkfXnB1sQ6e" ]
+                            },
+                            {
+                            "commitment": "confirmed"
+                            }
+                        ]
+                        }
+                    ))
+                
+                def on_message_cc(_, msg):
+                                        
+                    if not sniper_start or not tasks:
+                        
+                        return 
+                    
+                    tx = json.loads(msg)["params"]["result"]["value"]
+
+                    logs = "".join(tx["logs"])
+                    
+                    if not tx["err"] and "Instruction: Sell" in logs:
+                        
+                        snipeT = Thread(
+                            target=check_cc_tx_and_purchase,
+                            args=[tx],
+                            daemon=True
+                        )
+                        
+                        snipeT.start()
+                                    
+                ws = websocket.WebSocketApp(url=ws_rpc, on_open=on_open_cc, on_message=on_message_cc)
+
+                wsT = Thread(
+                    target=run_websocket,
+                    daemon=True
+                )
+
+                wsT.start()
+                
+                while True:
+                                            
+                    if kill_sniper or not tasks:
+                        
+                        kill_websocket = True
+                        kill_sniper = True
+                        
+                        ws.close()
                         
                         break
-                
-                kill_sniper = True
+                    
+                    if sniper_data:
                         
-                console.input(
-                    "\n\n [purple]>>[/] Press ENTER to exit ", password=True)
+                        updated_collections = {}
+                        
+                        for collection in sniper_data:
+                            
+                            symbol = collection["Collection"]
+                            
+                            if symbol not in cached_collections.values():
+                                
+                                collection_metadata = get_me_collection_metadata(symbol=symbol)
+
+                                if collection_metadata:
+                                    
+                                    collection_creators = collection_metadata["creators"]
+                                    collection_update_auth = collection_metadata["updateAuthority"]
+                                    
+                                    collection_identifier = "".join(collection_creators + [collection_update_auth])
+                                    
+                                    updated_collections[collection_identifier] = symbol
+                                    cached_collections[collection_identifier] = symbol
+                                    
+                                    sniper_start = True
+                            else:
+                                
+                                collection_identifier = list(cached_collections.keys())[list(cached_collections.values()).index(symbol)]
+                                updated_collections[collection_identifier] = symbol
+                        
+                        loaded_collections = updated_collections
+                        
+                console.input("\n\n [purple]>>[/] Press ENTER to exit ", password=True)
 
                 menu = True
 
@@ -3985,11 +4015,9 @@ while True:
                     
                     console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Initialazing mint[/]\n".format("ALL", "INIT", show_drop_time)), end="")
 
-                    if user_time:
+                    console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for drop time[/]\n".format("ALL", "INIT", show_drop_time)), end="")
 
-                        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for drop time[/]\n".format("ALL", "INIT", show_drop_time)), end="")
-
-                        wait_for_drop(exit_before=3)
+                    wait_for_drop(exit_before=3)
                         
                     while True:
                         
@@ -4008,10 +4036,8 @@ while True:
                         else:
 
                             console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [red]Unable to initialize txs (node)[/]\n".format("ALL", "INIT", show_drop_time)), end="")
-                            
-                    if user_time:
-                        
-                        wait_for_drop()
+                                                    
+                    wait_for_drop()
                         
                     bonding_price = bf_launchpad.get_bonding_price(token_bonding)
 
@@ -4049,10 +4075,9 @@ while True:
                         break
                     
                     DROP_TIME = int(time.time())
-                    
-                    
+                       
             elif mode == 11:
-
+                                    
                 if user_time:
 
                     DROP_TIME = user_time
@@ -4061,61 +4086,106 @@ while True:
                 
                 console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Initialazing mint[/]\n".format("ALL", "INIT", show_drop_time)), end="")
 
-                if user_time:
+                console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for drop time[/]\n".format("ALL", "INIT", show_drop_time)), end="")
 
-                    console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for drop time[/]\n".format("ALL", "INIT", show_drop_time)), end="")
-
-                    wait_for_drop()
+                wait_for_drop()
                 
-                timeout = time.time() + 60
-                last_edition = None
+                kill_websocket = False
                 
-                trs = []
-                i = 0
+                ws_rpc = get_websocket_url(mint_rpc)
+                        
+                mint_auth = str(PublicKey.find_program_address(
+                    seeds=[
+                        "metadata".encode("utf-8"),
+                        bytes(PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")),
+                        bytes(PublicKey(CM)),
+                        "edition".encode("utf-8")
+                    ],
+                    program_id=PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s")
+                )[0])
                 
                 show_drop_time = datetime.fromtimestamp(DROP_TIME).strftime("%H:%M:%S")
 
-                while time.time() < timeout:
-                    
-                    supply = ExchangeArt.get_collection_supply(CM, mint_rpc)
-                    
-                    if supply:
-                        
-                        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for new edition[/]\n".format("ALL", "FETCH", show_drop_time)), end="")
+                def on_open_ea(ws: websocket.WebSocket):
 
-                        minted, available = supply
+                    ws.send(json.dumps(
+                        {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "accountSubscribe",
+                        "params": [
+                            mint_auth,
+                            {
+                            "encoding": "jsonParsed",
+                            "commitment": "processed"
+                            }
+                        ]
+                        }
+                    ))
+                    
+                def on_message_ea(_, message):
+                    
+                    global kill_websocket
+                    
+                    data = json.loads(message)["params"]["result"]["value"]["data"][0]
+                    
+                    data = b64decode(data)
+
+                    if len(data) != 282:
                         
-                        if minted != last_edition:
-                            
-                            blockhash = get_blockhash(mint_rpc)
-                            
-                            for wallet in wallets:
+                        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [red]Collection is oos[/]\n".format("ALL", "FETCH", show_drop_time)), end="")
+                        
+                        kill_websocket = True
+                        
+                        return     
                                 
-                                name = wallet["name"]
-                                tasks = wallet["tasks"]
-                                privkey = wallet["privkey"]
-                                
-                                status = "[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/]".format(name, f"{i + 1}/???", show_drop_time)
-
-                                if tasks:
-                                        
-                                    mintT = Thread(target=send_ea_tx, args=[privkey, mint_rpc, blockhash, minted, status])
-                                    mintT.start()
-                                    trs.append(mintT)
-                            
-                            last_edition = minted
-                            
-                            i += 1
-
-                    else:
-                        
-                        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [red]Error fetching new editions / collection oos[/]\n".format("ALL", "FETCH", show_drop_time)), end="")
-
-                    time.sleep(0.2)
+                    minted = int.from_bytes(data[1:9], "little")
+                    available = int.from_bytes(data[10:18], "little")
                     
-                for tr in trs:
-                    tr.join()
+                    blockhash = get_blockhash(mint_rpc)
+                    
+                    trs = []
+                    
+                    for wallet in wallets:
+                        
+                        name = wallet["name"]
+                        tasks = wallet["tasks"]
+                        privkey = wallet["privkey"]
+                        
+                        status = "[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/]".format(name, f"{minted}/{available}", show_drop_time)
 
+                        if tasks:
+                                
+                            mintT = Thread(target=send_ea_tx, args=[privkey, mint_rpc, blockhash, minted, status])
+                            mintT.start()
+                            trs.append(mintT)
+                    
+                    for tr in trs:
+                        
+                        tr.join()
+
+                    
+                ws = websocket.WebSocketApp(url=ws_rpc, on_open=on_open_ea, on_message=on_message_ea)
+
+                wsT = Thread(
+                    target=run_websocket,
+                    daemon=True
+                )
+
+                wsT.start()
+                
+                while True:
+                    
+                    console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for new edition[/]\n".format("ALL", "FETCH", show_drop_time)), end="")
+
+                    if kill_websocket:
+                        
+                        ws.close()
+                        
+                        break
+                    
+                    time.sleep(0.5)
+                    
                 print()
                 
                 mints_status = get_cm_mints_status(CM, PROGRAM)
@@ -4128,14 +4198,11 @@ while True:
                     
                 print("\n")
 
-                status = Prompt.ask("[purple]>>[/] Insert 'e' to exit or 'r' to retry mint", choices=["e", "r"])
+                console.input("[purple]>>[/] Press ENTER to exit ", password=True)
 
                 print("\n")
 
-                if status == "e":
+                menu = True
 
-                    menu = True
-
-                    break
+                break
                 
-                DROP_TIME = int(time.time())

@@ -94,17 +94,18 @@ class ExchangeArt():
             return None
         
     @staticmethod
-    def get_hmac_code():
+    def get_hmac_code(wallet_address: str):
         
-        url = "https://api.exchange.art/v2/utility/timestamp"
+        url = f"https://api.exchange.art/v2/mints/editions/pass?address={wallet_address}"
         
         headers = {
-            'authority': 'api.exchange.art',
+            'authorization': 'api.exchange.art',
             'sec-ch-ua': '"Chromium";v="104", " Not A;Brand";v="99", "Google Chrome";v="104"',
-            'accept': 'application/json, text/plain, */*',
-            'content-type': 'application/json',
             'sec-ch-ua-mobile': '?0',
+            'content-type': 'application/json',
+            'accept': 'application/json, text/plain, */*',
             'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36',
+            'x-recaptcha-token': 'AV64Ye1fCaAhPlZxdggX0KaZk9s7liUIO6oCgCO1oOTdIQpsVhIEHkNhz6xMpRJPx7zaisd5rYKaBFK9FwUTioUTalMLXv7vb7m-xNuCplMXJEYeQYwH47-mHkYRIy-lY6ikk7Kxx7FNQA6VleTwXOEdfQ:U=f27260e800000000',
             'sec-ch-ua-platform': '"macOS"',
             'origin': 'https://exchange.art',
             'sec-fetch-site': 'same-site',
@@ -124,6 +125,7 @@ class ExchangeArt():
             
             res = requests.post("http://127.0.0.1:3000", json=payload).json()
             
+            print(res)
             res = json.loads(res["body"])
             
             return res if res.get("hmacCode") else None

@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 import json
 from threading import Thread
 
@@ -257,16 +258,23 @@ def send_sniper_webhook(mint: str, tx: str, price: float, sniping_time: float, w
 
 sol_rpc = "https://api.mainnet-beta.solana.com"
 sol_rpc = "https://snipe.acidnode.io/"
+#sol_rpc = "https://late-spring-market.solana-mainnet.discover.quiknode.pro/78837b96c6e80f0da8101c6b3342544ad52ad2f9/"
 
 client = Client(sol_rpc)
 
-a = client.get_signature_statuses(["59QnTjNcXGzkuaHAjtDifH1dSSJFsBZU1U4oEGevtuvpVX87GFXKg2Y9G2yyz9nA3LnDvpEUFLixzmaM3uPf9WjC"])
+a = client.get_account_info("Aqw1uJT4o24WKrjKvETvA7ftSjrgMXQFnEywfHKn8f5N")
 
-print(a)
-        
+data = a["result"]["value"]["data"][0]
+
+data = base64.b64decode(data)
+
+minted = int.from_bytes(data[1:9], "little")
+available = int.from_bytes(data[10:18], "little")
+
+print(minted, available)
 exit()
 
-i = 10
+i = 15
 until_tx = None
 recent_txs = []
 
@@ -274,7 +282,7 @@ while i:
     
     last_txs = get_account_last_txs(
         account="M2mx93ekt1fmXSVkTrUL9xVFHkmME8HTUi5Cyc5aF7K", 
-        limit=5, 
+        limit=10, 
         commitment="confirmed",
         until=until_tx
     )
@@ -290,6 +298,7 @@ while i:
                 me_time = a["blockTime"]
                 tx = a["signature"]
                 
+                our_time = datetime.fromtimestamp(our_time).strftime("%H:%M:%S")
                 print(f"our time: {our_time} | ME time: {me_time} | tx: {tx}")
                 
         until_tx = last_txs[0]["signature"]

@@ -5,9 +5,8 @@ from solana.rpc.api import Client
 from solana.transaction import Transaction, TransactionInstruction, AccountMeta
 from spl.token.instructions import create_associated_token_account, transfer_checked, TransferCheckedParams, burn, BurnParams, get_associated_token_address, close_account, CloseAccountParams
 from solana.rpc.types import TxOpts
-from base58 import b58decode, b58encode
+from base58 import b58decode
 from solana.system_program import TransferParams, transfer
-from rich.console import Console
 from solana.rpc.commitment import Commitment
 from solana.blockhash import Blockhash
 
@@ -23,11 +22,8 @@ SYSTEM_RENT_PROGRAM = 'SysvarRent111111111111111111111111111111111'
 NFT_TRANSFER_PROGRAM = "DeJBGdMFa1uynnnKiwrVioatTuHmNLpyFKnmB5kaFdzQ"
 BURN_PROGRAM = "burn68h9dS2tvZwtCFMt79SyaEgvqtcZZWJphizQxgt"
 
-console = Console(highlight=False, log_path=False)
-
 
 class SolWalletManager():
-    
     
     def __init__(self, rpc: str, privkey: str):
         

@@ -54,7 +54,7 @@ class LaunchMyNftLaunchpad():
         self.transaction.add(
             TransactionInstruction(
                 keys=[],
-                data=bytes.fromhex("00605b030010270000"),
+                data=bytes.fromhex("0080a9030010270000"),
                 program_id=PublicKey(COMPUTE_BUDGET_ID)
             )
         )
@@ -105,7 +105,7 @@ class LaunchMyNftLaunchpad():
         ]
 
         price_data = list(int(self.cm_meta.data.price).to_bytes(8, "little"))
-        main_data = list(bytes.fromhex("4f47cf20b2661513000000000000000000000000"))
+        main_data = list(bytes.fromhex("4f47cf20b266151300000000"))
 
         data = main_data + price_data
 

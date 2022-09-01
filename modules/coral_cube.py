@@ -187,13 +187,13 @@ class CoralCube():
 
         return None
 
-    def list_nft(self, seller: str, mint: str, price: int) -> str | None:
+    def list_nft(self, mint: str, price: int) -> str | None:
         
         OPTS = TxOpts(skip_preflight=True, skip_confirmation=True)
 
         transaction = Transaction()
 
-        token_account = get_associated_token_address(owner=PublicKey(seller), mint=PublicKey(mint))
+        token_account = get_associated_token_address(owner=PublicKey(self.payer), mint=PublicKey(mint))
 
         METADATA = PublicKey.find_program_address(
             seeds=[
@@ -205,7 +205,7 @@ class CoralCube():
         )
 
         SELLER_TRADE_STATE = self._trade_state(
-            account=seller,
+            account=self.payer,
             token_account=str(token_account),
             mint_address=mint,
             price=price
@@ -214,7 +214,7 @@ class CoralCube():
         FREE_TRADE_STATE = PublicKey.find_program_address(
             seeds=[
                 "auction_house".encode("utf-8"),
-                bytes(PublicKey(seller)),
+                bytes(PublicKey(self.payer)),
                 bytes(PublicKey(CC_KEY)),
                 bytes(PublicKey(token_account)),
                 bytes(PublicKey(WRAPPED_SOL)),

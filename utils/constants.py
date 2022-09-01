@@ -8,7 +8,7 @@ class SolanaEndpoints():
     
 class Bot():
     
-    VERSION = "0.20.0.0"
+    VERSION = "0.21.0.0"
     USER_OS = sys.platform
 
 class Discord():
@@ -21,8 +21,8 @@ class Discord():
 class Keys():
     
     TLS_KEY = "oLZxFnte8n5UL6ERJqBjH7tJk37jVh503RP5IIt0"
-    CF_API_KEY = "9c72148a-4e93-46b9-b5d0-d125e6c12f92"
-    OS_API_KEY = "8216f4bf-659c-4b22-be8b-690285f86762"
+    HELHEIM_API_KEY = ""
+    OS_API_KEY = ""
     
 
 class Paths():
@@ -39,6 +39,10 @@ class SolanaPrograms():
     BF_PROGRAM = "BFCMkgg9eFSv54HKJZFD5RMG8kNR5eMAEWnAtfRTPCjU"
     EA_PROGRAM = "EXBuYPNgBUXMTsjCbezENRUtFQzjUNZxvPGTd11Pznk5"
 
+class EthereumContracts():
+    
+    OS_CONTRACT = ""
+    
 class IDLs():
     
     LMN_IDL = {

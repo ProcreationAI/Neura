@@ -14,7 +14,7 @@ from rich.console import Console
 from solana.rpc.core import UnconfirmedTxError
 from urllib.parse import quote
 
-from utils.bypass import create_tls_payload, get_random_ua
+from utils.bypass import create_tls_payload
 from utils.solana import get_lamports_from_listing_data, sol_to_lamports, lamports_to_sol
 
 TOKEN_PROGRAM_ID = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
@@ -76,7 +76,7 @@ class MagicEden():
                 method="GET",
                 headers=headers
             )
-            get_random_ua()
+
             res = requests.post("http://127.0.0.1:3000",
                                 json=payload, timeout=3).json()
 
@@ -254,7 +254,7 @@ class MagicEden():
         try:
                         
             tx = self.client.get_transaction(tx_sig=tx, commitment=Commitment("confirmed"))["result"]
-
+            
             logs = "".join(tx["meta"]["logMessages"])
             accounts = tx["transaction"]["message"]["accountKeys"]
             
@@ -277,7 +277,7 @@ class MagicEden():
                 }
                 
         except:
-                                    
+                                                
             pass
         
         return None
@@ -331,7 +331,8 @@ class MagicEden():
 
                 tx = Transaction.deserialize(bytes(data))
 
-                tx.sign_partial(*[self.payer])
+                #tx.sign_partial(*[self.payer])
+                tx.add_signer(self.payer)
 
                 serialized = tx.serialize()
 
@@ -340,7 +341,7 @@ class MagicEden():
                 return tx_hash
 
             except:
-
+                
                 i -= 1
 
         return None
@@ -393,7 +394,8 @@ class MagicEden():
 
                 tx = Transaction.deserialize(bytes(data))
 
-                tx.sign_partial(*[self.payer])
+                #tx.sign_partial(*[self.payer])
+                tx.add_signer(self.payer)
 
                 serialized = tx.serialize()
 
@@ -456,7 +458,8 @@ class MagicEden():
 
                 tx = Transaction.deserialize(bytes(data))
 
-                tx.sign_partial(*[self.payer])
+                #tx.sign_partial(*[self.payer])
+                tx.add_signer(self.payer)
                 
                 serialized = tx.serialize()
 
@@ -476,7 +479,7 @@ class MagicEden():
     
     def buy_nft(self, seller: str, price: int, mint: str, escrow: str, creators: list) -> str | None:
         
-        OPTS = TxOpts(skip_preflight=True, skip_confirmation=False, preflight_commitment=Commitment("confirmed"))
+        OPTS = TxOpts(skip_preflight=True, skip_confirmation=False, preflight_commitment=Commitment("processed"))
 
         transaction = Transaction()
         

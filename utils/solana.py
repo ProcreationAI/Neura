@@ -10,11 +10,17 @@ from anchorpy import Program, Wallet, Provider
 from solana.rpc.async_api import AsyncClient
 from solana.keypair import Keypair
 from solana.rpc import types
-
+from urllib.parse import urlparse
 from anchorpy.idl import Idl
 
 from lib.idl import AccountClient
 
+
+def get_websocket_url(rpc: str):
+    
+    parsed = urlparse(rpc)
+    
+    return "wss://" + parsed.netloc
 
 def get_wallet_nfts(wallet: str, rpc: str):
 

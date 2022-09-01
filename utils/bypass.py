@@ -3,8 +3,6 @@ import cloudscraper
 import subprocess
 import time
 import requests
-from random_user_agent.user_agent import UserAgent
-from random_user_agent.params import SoftwareName, OperatingSystem, Popularity
 
 try:
     import helheim
@@ -13,18 +11,6 @@ except:
 
 from .constants import Paths, Keys
 
-
-software_names = [SoftwareName.CHROME.value]
-operating_systems = [OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value, OperatingSystem.MAC.value]   
-popularity = [Popularity.POPULAR.value]
-
-user_agent_rotator = UserAgent(software_names=software_names, operating_systems=operating_systems, popularity=popularity, limit=1000)
-
-
-def get_random_ua():
-    
-    return user_agent_rotator.get_random_user_agent()
-    
 def injection(session, response):
 
     if helheim.isChallenge(session, response):

@@ -1,6 +1,7 @@
 
 from datetime import datetime
 import json
+import time
 import websocket
 from base58 import b58decode
 from dhooks import Embed, Webhook
@@ -25,8 +26,8 @@ def get_lamports_from_listing_data(data: str, left_offset: int, right_offset: in
 
 def on_message(_, message):
 
-    tx = json.loads(message)["params"]["result"]["value"]
 
+    tx = json.loads(message)["params"]["result"]["value"]
 
     logs = "".join(tx["logs"])
     
@@ -39,9 +40,11 @@ def on_message(_, message):
             
             print(json.dumps(listing_data, indent=3)) """
 
+    
 def on_open(ws: websocket.WebSocket):
 
     ws.send(json.dumps(
+
         {
         "jsonrpc": "2.0",
         "id": 1,
