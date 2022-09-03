@@ -1007,6 +1007,7 @@ def get_me_collection_metadata(symbol: str):
 
     last_listed = MagicEden.get_listed_nfts(
         symbol=symbol,
+        limit=2
     )
 
     if last_listed:
@@ -1020,9 +1021,9 @@ def get_me_collection_metadata(symbol: str):
         if nft_metadata:
             
             uri = nft_metadata["data"]["uri"]
-            
+
             uri_metadata = get_uri_metadata(uri=uri)
-                
+            
             if uri_metadata:
                                 
                 attributes = [attribute["trait_type"] for attribute in uri_metadata["attributes"]] if uri_metadata.get("attributes") else []
@@ -1043,6 +1044,7 @@ def get_cc_collection_metadata(symbol: str):
 
     last_listed = CoralCube.get_listed_nfts(
         symbol=symbol,
+        limit=2
     )
 
     if last_listed:
@@ -1157,97 +1159,11 @@ def monitor_fff_sniper_file(file_name: str):
             
         time.sleep(0.5)
 
-def monitor_me_sniper_file(file_name: str):
-    
-    [None, None]
-    
+
+def monitor_sniper_file(file_name: str):
+        
     global sniper_data, kill_sniper
     
-    [None, None]
-
-    while not kill_sniper:
-        
-        collections = []
-        
-        try:
-            
-            with open(f'{file_name}.csv', 'r') as f:
-
-                reader = csv.reader(f)
-
-                reader = list(reader)
-                
-            keys = reader[0]
-            rows = reader[1:25]
-            
-            if not rows and sniper_start:
-                
-                kill_sniper = True
-                
-        except:
-                
-            rows = []
-
-        for values in rows:
-            
-            sniper_data_raw = dict(zip(keys, values))
-            
-            try:
-                
-                if sniper_data_raw["Collection"]:
-                    
-                    sniper_data_raw["MinPrice"] = float(sniper_data_raw["MinPrice"]) if sniper_data_raw["MinPrice"] else None
-                    sniper_data_raw["MaxPrice"] = float(sniper_data_raw["MaxPrice"]) if sniper_data_raw["MaxPrice"] else None
-                    
-                    sniper_data_raw["UnderFloor(%)"] = float(sniper_data_raw["UnderFloor(%)"]) if sniper_data_raw["UnderFloor(%)"] else None
-                    
-                    if not (sniper_data_raw["MinPrice"] and sniper_data_raw["MaxPrice"]) and not sniper_data_raw["UnderFloor(%)"]:
-
-                        raise ValueError
-                                                
-                    sniper_data_raw["MaxRank"] = int(sniper_data_raw["MaxRank"]) if sniper_data_raw["MaxRank"] else None
-                                                
-                    sniper_data_raw["MinRank"] = int(sniper_data_raw["MinRank"]) if sniper_data_raw["MinRank"] else None
-                        
-                    sniper_data_raw["AutoListByPrice(%)"] = float(sniper_data_raw["AutoListByPrice(%)"]) if sniper_data_raw["AutoListByPrice(%)"] else None
-                        
-                    sniper_data_raw["AutoListByFloor(%)"] = float(sniper_data_raw["AutoListByFloor(%)"]) if sniper_data_raw["AutoListByFloor(%)"] else None
-                                          
-                    filtered_attributes = []
-                    
-                    if sniper_data_raw["Attributes"]:
-                        
-                        attributes = sniper_data_raw["Attributes"].split(";")
-                        
-                        for attribute in attributes:
-                            
-                            trait, value = attribute.split("=")
-
-                            filtered_attributes.append({"trait_type": trait, "value": value})
-                        
-                    sniper_data_raw["Attributes"] = filtered_attributes if filtered_attributes else None
-                               
-                    sniper_data_raw["Floor"] = current_floors[sniper_data_raw["Collection"]] if sniper_data_raw["Collection"] in current_floors.keys() else None
-                    
-                    collections.append(sniper_data_raw)
-                
-            except:
-                                                
-                pass
-            
-        sniper_data = collections
-            
-        time.sleep(0.5)
-
-
-def monitor_cc_sniper_file(file_name: str):
-    
-    [None, None]
-    
-    global sniper_data, kill_sniper
-    
-    [None, None]
-
     while not kill_sniper:
         
         collections = []
@@ -1285,7 +1201,7 @@ def monitor_cc_sniper_file(file_name: str):
                     
                     sniper_data_raw["UnderFloor(%)"] = float(sniper_data_raw["UnderFloor(%)"]) if sniper_data_raw["UnderFloor(%)"] else None
                     
-                    if not (sniper_data_raw["MinPrice"] and sniper_data_raw["MaxPrice"]) and not sniper_data_raw["UnderFloor(%)"]:
+                    if (sniper_data_raw["MinPrice"] is None or sniper_data_raw["MaxPrice"] is None) and sniper_data_raw["UnderFloor(%)"] is None:
 
                         raise ValueError
                                                 
@@ -2266,7 +2182,7 @@ while True:
                 pubkey = wallet["address"]
                 
                 monitorSniperFileT = Thread(
-                    target=monitor_me_sniper_file,
+                    target=monitor_sniper_file,
                     args=["me-sniper"],
                     daemon=True
                 )
@@ -2513,7 +2429,7 @@ while True:
                         break
                     
                     if sniper_data:
-                        
+
                         updated_collections = {}
                         
                         for collection in sniper_data:
@@ -2588,7 +2504,7 @@ while True:
                                                         
                             if operation_type in ["l", "ts", "tn", "b"]:
 
-                                if nft.get("collectionName") or (nft.get("onChainCollection") and nft["onChainCollection"].get("key")) or operation_type == "b":
+                                if nft.get("collectionName") or (nft.get("onChainCollection") and nft["onChainCollection"].get("key")) or operation_type in ["tn", "b"]:
                                     
                                     nfts_data.append(
                                         {
@@ -3389,7 +3305,7 @@ while True:
                 pubkey = wallet["address"]
                 
                 monitorSniperFileT = Thread(
-                    target=monitor_cc_sniper_file,
+                    target=monitor_sniper_file,
                     args=["cc-sniper"],
                     daemon=True
                 )

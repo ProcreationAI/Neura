@@ -27,7 +27,6 @@ class Keys():
 
 class Paths():
     
-    BIFROST_PATH  = str(Path("bin/bifrost.dll").resolve())
     TLS_PATH = str(Path("bin/TLS").resolve()) if sys.platform == "darwin" else str(Path("bin/TLS.exe").resolve())
     
 class SolanaPrograms():

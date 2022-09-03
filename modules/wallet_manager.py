@@ -67,7 +67,7 @@ class SolWalletManager():
 
         except:
                                                 
-            return False
+            return None
         
     def transfer_nft(self, mint_address: str, to_address: str):
 
@@ -144,11 +144,11 @@ class SolWalletManager():
 
         except:
                                                 
-            return False
+            return None
     
 
         
-    def burn_nft(self, mint: str):
+    def _burn_nft_default(self, mint: str):
         
         OPTS = TxOpts(skip_preflight=True, skip_confirmation=True)
         
@@ -197,10 +197,10 @@ class SolWalletManager():
             return tx_hash
 
         except:
-                                                
-            return False
+                                                            
+            return None
     
-    def full_burn_nft(self, mint: str):
+    def _burn_nft_full(self, mint: str, collection_address: str):
         
         OPTS = TxOpts(skip_preflight=True, skip_confirmation=True)
 
@@ -235,30 +235,24 @@ class SolWalletManager():
             program_id=PublicKey(METADATA_PROGRAM_ID)
         )
         
-        
-        nft_metadata = get_nft_metadata(mint, self.rpc)
-        
+        COLLECTION_METADATA = PublicKey.find_program_address(
+            seeds=[
+                'metadata'.encode('utf-8'),
+                bytes(PublicKey(METADATA_PROGRAM_ID)),
+                bytes(PublicKey(collection_address))
+            ],
+            program_id=PublicKey(METADATA_PROGRAM_ID)
+        )
+                
         keys = [
             AccountMeta(pubkey=METADATA_PROGRAM_ADDRESS[0], is_signer=False, is_writable=True),
             AccountMeta(pubkey=PublicKey(self.payer.public_key), is_signer=True, is_writable=True),
             AccountMeta(pubkey=PublicKey(mint), is_signer=False, is_writable=True),
             AccountMeta(pubkey=PublicKey(payer_ata), is_signer=False, is_writable=True),
             AccountMeta(pubkey=EDITION_PROGRAM_ADDRESS[0], is_signer=False, is_writable=True),
-            AccountMeta(pubkey=PublicKey(TOKEN_PROGRAM_ID), is_signer=False, is_writable=False)
+            AccountMeta(pubkey=PublicKey(TOKEN_PROGRAM_ID), is_signer=False, is_writable=False),
+            AccountMeta(pubkey=COLLECTION_METADATA[0], is_writable=True, is_signer=False)
         ]
-        
-        if nft_metadata["collection"]:
-            
-            COLLECTION_METADATA = PublicKey.find_program_address(
-                seeds=[
-                    'metadata'.encode('utf-8'),
-                    bytes(PublicKey(METADATA_PROGRAM_ID)),
-                    bytes(PublicKey(nft_metadata["collection"]))
-                ],
-                program_id=PublicKey(METADATA_PROGRAM_ID)
-            )
-            
-            keys.append(AccountMeta(pubkey=COLLECTION_METADATA[0], is_writable=True, is_signer=False))
             
         transaction.add(
             TransactionInstruction(
@@ -284,11 +278,25 @@ class SolWalletManager():
             return tx_hash
 
         except:
-                                                
-            return False
+                                                            
+            return None
         
 
+    def burn_nft(self, mint: str):
         
+        nft_metadta = get_nft_metadata(mint, self.rpc)
+        
+        if nft_metadta:
+            
+            if nft_metadta["collection"]:
+                
+                return self._burn_nft_full(mint, nft_metadta["collection"])
+            
+            return self._burn_nft_default(mint)
+        
+        return None
+    
+    
 if __name__ == "__main__":
     
     SolWalletManager()

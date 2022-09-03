@@ -29,16 +29,16 @@ def on_message(_, message):
 
     tx = json.loads(message)["params"]["result"]["value"]
 
+    print(tx)
     logs = "".join(tx["logs"])
     
     if not tx["err"] and "Instruction: Sell" in logs:
         
-        print(datetime.now().strftime("%H:%M:%S"), tx["signature"])
-        """ listing_data = me.check_tx_is_listing(tx["signature"])
+        listing_data = me.check_tx_is_listing(tx["signature"])
         
         if listing_data:
             
-            print(json.dumps(listing_data, indent=3)) """
+            print(json.dumps(listing_data, indent=3))
 
     
 def on_open(ws: websocket.WebSocket):
@@ -66,8 +66,9 @@ def on_error(_, error):
 
 rpc = "wss://snipe.acidnode.io/"
 
+
 me = MagicEden(
-    rpc="https://snipe.acidnode.io/",
+    rpc="https://late-spring-market.solana-mainnet.discover.quiknode.pro/78837b96c6e80f0da8101c6b3342544ad52ad2f9/",
     privkey="3chJPsP3iLRAg2FiRrd5D1N4DfKKhkVw2DWpWP7rf9L7ccFNE5kp39aX86D7BQRZfXuxyXdgyAAdBqW5mkQVNx87"
 )
 ws = websocket.WebSocketApp(url=rpc, on_open=on_open, on_message=on_message, on_error=on_error)

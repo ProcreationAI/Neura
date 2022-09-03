@@ -190,7 +190,7 @@ def get_uri_metadata(uri: str):
         return requests.get(uri).json()
     
     except:
-        
+                
         return None
 
 

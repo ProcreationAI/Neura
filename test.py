@@ -258,15 +258,17 @@ def send_sniper_webhook(mint: str, tx: str, price: float, sniping_time: float, w
 
 sol_rpc = "https://api.mainnet-beta.solana.com"
 sol_rpc = "https://mint.acidnode.io/"
-#sol_rpc = "https://late-spring-market.solana-mainnet.discover.quiknode.pro/78837b96c6e80f0da8101c6b3342544ad52ad2f9/"
+sol_rpc = "https://late-spring-market.solana-mainnet.discover.quiknode.pro/78837b96c6e80f0da8101c6b3342544ad52ad2f9/"
 
 client = Client(sol_rpc)
 
-a = client.get_account_info("6vFNvGHvCJw8tggobVVTSVVLpAEAYirNetwtyZq9LaJf", encoding="jsonParsed")
+
+a = client.get_transaction("3k6wXTFtqyvJqaZVB6rTUPvfZn1g6WzemsJcj2FpZpBXkEGyDaDAkPqBqJXaeeZCxeNFp98dSt4VJK99o7eeyncT", commitment=Commitment("processed"))
+
 
 print(a)
-exit()
 
+exit()
 i = 15
 until_tx = None
 recent_txs = []

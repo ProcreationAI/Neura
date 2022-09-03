@@ -119,7 +119,6 @@ class ExchangeArt():
             
             res = requests.post("http://127.0.0.1:3000", json=payload).json()
             
-            print(res)
             res = json.loads(res["body"])
             
             return res if res.get("hmacCode") else None

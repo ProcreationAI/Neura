@@ -272,7 +272,7 @@ class MagicEden():
                 }
                 
         except:
-                                                
+                                                            
             pass
         
         return None
