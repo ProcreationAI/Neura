@@ -996,9 +996,17 @@ def get_collection_symbol(url):
 def run_websocket():
         
     while True:
+        
+        web_socket = ws   
+        
+        try:
                             
-        ws.run_forever()
+            web_socket.run_forever()
 
+        except:
+
+            pass
+        
         if kill_websocket:
             
             return
@@ -1023,7 +1031,7 @@ def get_me_collection_metadata(symbol: str):
             uri = nft_metadata["data"]["uri"]
 
             uri_metadata = get_uri_metadata(uri=uri)
-            
+
             if uri_metadata:
                                 
                 attributes = [attribute["trait_type"] for attribute in uri_metadata["attributes"]] if uri_metadata.get("attributes") else []
@@ -1162,7 +1170,7 @@ def monitor_fff_sniper_file(file_name: str):
 
 def monitor_sniper_file(file_name: str):
         
-    global sniper_data, kill_sniper
+    global sniper_data
     
     while not kill_sniper:
         
@@ -1179,10 +1187,6 @@ def monitor_sniper_file(file_name: str):
             keys = reader[0]
             rows = reader[1:25]
             
-            if not rows and sniper_start:
-                
-                kill_sniper = True
-                
         
         except:
                 
@@ -2389,7 +2393,7 @@ while True:
                     ))
                 
                 def on_message_me(_, msg):
-                                        
+                    
                     if not sniper_start or not tasks:
                         
                         return 
@@ -2419,7 +2423,7 @@ while True:
                 
                 while True:
                                             
-                    if kill_sniper or not tasks:
+                    if not tasks:
                         
                         kill_websocket = True
                         kill_sniper = True
@@ -2428,7 +2432,7 @@ while True:
                         
                         break
                     
-                    if sniper_data:
+                    if sniper_data is not None:
 
                         updated_collections = {}
                         
@@ -2449,7 +2453,7 @@ while True:
                                     
                                     updated_collections[collection_identifier] = symbol
                                     cached_collections[collection_identifier] = symbol
-                                    
+
                                     sniper_start = True
                             else:
                                 
@@ -3543,7 +3547,7 @@ while True:
                 
                 while True:
                                             
-                    if kill_sniper or not tasks:
+                    if not tasks:
                         
                         kill_websocket = True
                         kill_sniper = True
@@ -3552,7 +3556,7 @@ while True:
                         
                         break
                     
-                    if sniper_data:
+                    if sniper_data is not None:
                         
                         updated_collections = {}
                         

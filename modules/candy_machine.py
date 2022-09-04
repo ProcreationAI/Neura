@@ -159,7 +159,7 @@ class CandyMachinev2():
 
             keys.append(AccountMeta(pubkey=PublicKey(whitelist_associated_acc), is_signer=False, is_writable=True))
             keys.append(AccountMeta(pubkey=PublicKey(whitelist_mint), is_signer=False, is_writable=True))
-            keys.append(AccountMeta(pubkey=PublicKey(self.payer.public_key), is_signer=True, is_writable=True))
+            keys.append(AccountMeta(pubkey=PublicKey(self.payer.public_key), is_signer=True, is_writable=False))
 
         elif self.cm_meta.token_mint:
             
@@ -230,7 +230,7 @@ class CandyMachinev2():
                 AccountMeta(pubkey=PublicKey(METADATA_PROGRAM_ID), is_signer=False, is_writable=False),
                 AccountMeta(pubkey=PublicKey(SYSTEM_INSTRUCTIONS_PROGRAM), is_signer=False, is_writable=False),
                 AccountMeta(pubkey=PublicKey(collection_mint), is_signer=False, is_writable=False),
-                AccountMeta(pubkey=COLLECION_METADATA[0], is_writable=False, is_signer=False),
+                AccountMeta(pubkey=COLLECION_METADATA[0], is_writable=True, is_signer=False),
                 AccountMeta(pubkey=COLLECTION_EDITION[0], is_writable=False, is_signer=False),
                 AccountMeta(pubkey=cm_auth, is_signer=False, is_writable=False),
                 AccountMeta(pubkey=COLLECTION_RECORD[0], is_writable=False, is_signer=False)
