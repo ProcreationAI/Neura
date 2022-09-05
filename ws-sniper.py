@@ -1,6 +1,7 @@
 
 from datetime import datetime
 import json
+from threading import Thread
 import time
 import websocket
 from base58 import b58decode
@@ -26,18 +27,13 @@ def get_lamports_from_listing_data(data: str, left_offset: int, right_offset: in
 
 def on_message(_, message):
 
-
     tx = json.loads(message)["params"]["result"]["value"]
-
+    
     logs = "".join(tx["logs"])
     
     if not tx["err"] and "Instruction: Sell" in logs:
         
-        listing_data = me.check_tx_is_listing(tx["signature"])
-        
-        if listing_data:
-            
-            print(json.dumps(listing_data, indent=3))
+        print(tx["signature"])
 
     
 def on_open(ws: websocket.WebSocket):
@@ -59,9 +55,12 @@ def on_open(ws: websocket.WebSocket):
         }
     ))
 
-def on_error(_, error):
+def on_error(ws, error):
     
     print(error)
+    
+    time.sleep(2)
+    
 
 rpc = "wss://snipe.acidnode.io/"
 
@@ -70,8 +69,10 @@ me = MagicEden(
     rpc="https://sol.getblock.io/mainnet/?api_key=7752292c-0ffe-4356-a05b-6b7f3089f028",
     privkey="3chJPsP3iLRAg2FiRrd5D1N4DfKKhkVw2DWpWP7rf9L7ccFNE5kp39aX86D7BQRZfXuxyXdgyAAdBqW5mkQVNx87"
 )
-ws = websocket.WebSocketApp(url=rpc, on_open=on_open, on_message=on_message, on_error=on_error)
 
-ws.run_forever()
-
-
+while True:
+    
+    ws = websocket.WebSocketApp(url=rpc, on_open=on_open, on_message=on_message, on_error=on_error)
+    ws.run_forever()
+    
+    ws.close()

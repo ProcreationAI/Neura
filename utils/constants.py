@@ -8,7 +8,7 @@ class SolanaEndpoints():
     
 class Bot():
     
-    VERSION = "0.21.0.0"
+    VERSION = "0.21.1.0"
     USER_OS = sys.platform
 
 class Discord():

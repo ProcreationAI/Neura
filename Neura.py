@@ -986,30 +986,13 @@ def check_spl_token(token_mint: str):
         return False
 
 
+
 def get_collection_symbol(url):
 
     split_url = urlsplit(url)
 
     return split_url.path.split("/")[-1]
 
-
-def run_websocket():
-        
-    while True:
-        
-        web_socket = ws   
-        
-        try:
-                            
-            web_socket.run_forever()
-
-        except:
-
-            pass
-        
-        if kill_websocket:
-            
-            return
         
 def get_me_collection_metadata(symbol: str):
 
@@ -1139,6 +1122,50 @@ def get_sweeper_data(file_name: str):
         return None
 
 
+def fetch_sniper_data():
+    
+    global cached_collections, loaded_collections, sniper_start, kill_sniper
+    
+    while True:
+                                
+        if not tasks:
+            
+            kill_sniper = True
+            
+            ws.close()       
+                  
+            break
+        
+        if sniper_data is not None:
+
+            updated_collections = {}
+            
+            for collection in sniper_data:
+                
+                symbol = collection["Collection"]
+                
+                if symbol not in cached_collections.values():
+                    
+                    collection_metadata = get_me_collection_metadata(symbol=symbol)
+
+                    if collection_metadata:
+                        
+                        collection_creators = collection_metadata["creators"]
+                        collection_update_auth = collection_metadata["updateAuthority"]
+                        
+                        collection_identifier = "".join(collection_creators + [collection_update_auth])
+                        
+                        updated_collections[collection_identifier] = symbol
+                        cached_collections[collection_identifier] = symbol
+
+                        sniper_start = True
+                else:
+                    
+                    collection_identifier = list(cached_collections.keys())[list(cached_collections.values()).index(symbol)]
+                    updated_collections[collection_identifier] = symbol
+            
+            loaded_collections = updated_collections
+            
 def monitor_fff_sniper_file(file_name: str):
     
     global sniper_data
@@ -1169,9 +1196,13 @@ def monitor_fff_sniper_file(file_name: str):
 
 
 def monitor_sniper_file(file_name: str):
-        
+    
+    [None, None]
+    
     global sniper_data
     
+    [None, None]
+
     while not kill_sniper:
         
         collections = []
@@ -2179,7 +2210,6 @@ while True:
                 loaded_collections = {}
                 
                 ws_rpc = get_websocket_url(snipe_rpc)
-                kill_websocket = False
                 
                 privkey = wallet["privkey"]
                 tasks = wallet["tasks"]
@@ -2412,56 +2442,25 @@ while True:
                         
                         snipeT.start()
                                     
-                ws = websocket.WebSocketApp(url=ws_rpc, on_open=on_open_me, on_message=on_message_me)
-
-                wsT = Thread(
-                    target=run_websocket,
+                fetchT = Thread(
+                    target=fetch_sniper_data,
                     daemon=True
                 )
-
-                wsT.start()
+                
+                fetchT.start()
                 
                 while True:
-                                            
-                    if not tasks:
-                        
-                        kill_websocket = True
-                        kill_sniper = True
-                        
-                        ws.close()
+                    
+                    ws = websocket.WebSocketApp(url=ws_rpc, on_open=on_open_me, on_message=on_message_me)
+                    
+                    ws.run_forever()
+                    
+                    if kill_sniper:
                         
                         break
                     
-                    if sniper_data is not None:
-
-                        updated_collections = {}
-                        
-                        for collection in sniper_data:
-                            
-                            symbol = collection["Collection"]
-                            
-                            if symbol not in cached_collections.values():
-                                
-                                collection_metadata = get_me_collection_metadata(symbol=symbol)
-
-                                if collection_metadata:
-                                    
-                                    collection_creators = collection_metadata["creators"]
-                                    collection_update_auth = collection_metadata["updateAuthority"]
-                                    
-                                    collection_identifier = "".join(collection_creators + [collection_update_auth])
-                                    
-                                    updated_collections[collection_identifier] = symbol
-                                    cached_collections[collection_identifier] = symbol
-
-                                    sniper_start = True
-                            else:
-                                
-                                collection_identifier = list(cached_collections.keys())[list(cached_collections.values()).index(symbol)]
-                                updated_collections[collection_identifier] = symbol
-                        
-                        loaded_collections = updated_collections
-                        
+                    ws.close()
+                    
                 console.input("\n\n [purple]>>[/] Press ENTER to exit ", password=True)
 
                 menu = True
@@ -3302,7 +3301,6 @@ while True:
                 loaded_collections = {}
                 
                 ws_rpc = get_websocket_url(snipe_rpc)
-                kill_websocket = False
                 
                 privkey = wallet["privkey"]
                 tasks = wallet["tasks"]
@@ -3517,7 +3515,7 @@ while True:
                     ))
                 
                 def on_message_cc(_, msg):
-                                        
+                    
                     if not sniper_start or not tasks:
                         
                         return 
@@ -3536,56 +3534,25 @@ while True:
                         
                         snipeT.start()
                                     
-                ws = websocket.WebSocketApp(url=ws_rpc, on_open=on_open_cc, on_message=on_message_cc)
-
-                wsT = Thread(
-                    target=run_websocket,
+                fetchT = Thread(
+                    target=fetch_sniper_data,
                     daemon=True
                 )
-
-                wsT.start()
+                
+                fetchT.start()
                 
                 while True:
-                                            
-                    if not tasks:
-                        
-                        kill_websocket = True
-                        kill_sniper = True
-                        
-                        ws.close()
+                    
+                    ws = websocket.WebSocketApp(url=ws_rpc, on_open=on_open_cc, on_message=on_message_cc)
+                    
+                    ws.run_forever()
+                    
+                    if kill_sniper:
                         
                         break
                     
-                    if sniper_data is not None:
-                        
-                        updated_collections = {}
-                        
-                        for collection in sniper_data:
-                            
-                            symbol = collection["Collection"]
-                            
-                            if symbol not in cached_collections.values():
-                                
-                                collection_metadata = get_me_collection_metadata(symbol=symbol)
-
-                                if collection_metadata:
-                                    
-                                    collection_creators = collection_metadata["creators"]
-                                    collection_update_auth = collection_metadata["updateAuthority"]
-                                    
-                                    collection_identifier = "".join(collection_creators + [collection_update_auth])
-                                    
-                                    updated_collections[collection_identifier] = symbol
-                                    cached_collections[collection_identifier] = symbol
-                                    
-                                    sniper_start = True
-                            else:
-                                
-                                collection_identifier = list(cached_collections.keys())[list(cached_collections.values()).index(symbol)]
-                                updated_collections[collection_identifier] = symbol
-                        
-                        loaded_collections = updated_collections
-                        
+                    ws.close()
+                    
                 console.input("\n\n [purple]>>[/] Press ENTER to exit ", password=True)
 
                 menu = True
@@ -4084,28 +4051,37 @@ while True:
                         
                         tr.join()
 
+                def spam_logs_status():
                     
-                ws = websocket.WebSocketApp(url=ws_rpc, on_open=on_open_ea, on_message=on_message_ea)
+                    while True:
+                        
+                        console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for new edition[/]\n".format("ALL", "FETCH", show_drop_time)), end="")
 
-                wsT = Thread(
-                    target=run_websocket,
+                        time.sleep(0.5)
+
+                        if kill_websocket:
+                            
+                            break
+                        
+                spamT = Thread(
+                    target=spam_logs_status,
                     daemon=True
                 )
-
-                wsT.start()
+                
+                spamT.start()
                 
                 while True:
                     
-                    console.print(logger("[BOT] [cyan][WALLET ~ {:<10}] [TASK ~ {:<10}] [TIME ~ {:<6}][/] [yellow]Awaiting for new edition[/]\n".format("ALL", "FETCH", show_drop_time)), end="")
+                    ws = websocket.WebSocketApp(url=ws_rpc, on_open=on_open_ea, on_message=on_message_ea)
 
+                    ws.run_forever()
+                    
                     if kill_websocket:
-                        
-                        ws.close()
                         
                         break
                     
-                    time.sleep(0.5)
-                    
+                    ws.close()
+                
                 print()
                 
                 mints_status = get_cm_mints_status(CM, PROGRAM)
