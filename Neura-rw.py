@@ -1049,9 +1049,9 @@ def get_cc_collection_metadata(symbol: str):
         if nft_metadata:
             
             uri = nft_metadata["data"]["uri"]
-
+            
             uri_metadata = get_uri_metadata(uri=uri)
-
+                
             if uri_metadata:
                                 
                 attributes = [attribute["trait_type"] for attribute in uri_metadata["attributes"]] if uri_metadata.get("attributes") else []
@@ -1122,7 +1122,7 @@ def get_sweeper_data(file_name: str):
         return None
 
 
-def fetch_sniper_data(site: str):
+def fetch_sniper_data():
     
     global cached_collections, loaded_collections, sniper_start, kill_sniper
     
@@ -1146,13 +1146,7 @@ def fetch_sniper_data(site: str):
                 
                 if symbol not in cached_collections.values():
                     
-                    if site == "magiceden":
-                        
-                        collection_metadata = get_me_collection_metadata(symbol=symbol)
-
-                    elif site == "coralcube":
-                        
-                        collection_metadata = get_cc_collection_metadata(symbol=symbol)
+                    collection_metadata = get_me_collection_metadata(symbol=symbol)
 
                     if collection_metadata:
                         
@@ -2448,28 +2442,24 @@ while True:
                         
                         snipeT.start()
                                     
+                fetchT = Thread(
+                    target=fetch_sniper_data,
+                    daemon=True
+                )
                 
-                if tasks:
-                        
-                    fetchT = Thread(
-                        target=fetch_sniper_data,
-                        args=["magiceden"],
-                        daemon=True
-                    )
+                fetchT.start()
+                
+                while True:
                     
-                    fetchT.start()
+                    ws = websocket.WebSocketApp(url=ws_rpc, on_open=on_open_me, on_message=on_message_me)
                     
-                    while True:
+                    ws.run_forever()
+                    
+                    if kill_sniper:
                         
-                        ws = websocket.WebSocketApp(url=ws_rpc, on_open=on_open_me, on_message=on_message_me)
-                        
-                        ws.run_forever()
-                        
-                        if kill_sniper:
-                            
-                            break
-                        
-                        ws.close()
+                        break
+                    
+                    ws.close()
                     
                 console.input("\n\n [purple]>>[/] Press ENTER to exit ", password=True)
 
@@ -3356,6 +3346,7 @@ while True:
                     seller = listing_data["seller"]
                     price_in_sol = lamports_to_sol(listing_data["price"])
                     price_in_lamports = listing_data["price"]
+                    escrow_pubkey = listing_data["escrow"]
                     
                     nft_metadata = get_nft_metadata(mint_key=mint_address, rpc=mint_rpc)
                     
@@ -3543,27 +3534,24 @@ while True:
                         
                         snipeT.start()
                                     
-                if tasks:
-                        
-                    fetchT = Thread(
-                        target=fetch_sniper_data,
-                        args=["coralcube"],
-                        daemon=True
-                    )
+                fetchT = Thread(
+                    target=fetch_sniper_data,
+                    daemon=True
+                )
+                
+                fetchT.start()
+                
+                while True:
                     
-                    fetchT.start()
+                    ws = websocket.WebSocketApp(url=ws_rpc, on_open=on_open_cc, on_message=on_message_cc)
                     
-                    while True:
+                    ws.run_forever()
+                    
+                    if kill_sniper:
                         
-                        ws = websocket.WebSocketApp(url=ws_rpc, on_open=on_open_cc, on_message=on_message_cc)
-                        
-                        ws.run_forever()
-                        
-                        if kill_sniper:
-                            
-                            break
-                        
-                        ws.close()
+                        break
+                    
+                    ws.close()
                     
                 console.input("\n\n [purple]>>[/] Press ENTER to exit ", password=True)
 

@@ -1,2 +1,2 @@
-Collection,MinPrice,MaxPrice,UnderFloor(%),MinRank,MaxRank,Attributes,AutoListByPrice(%),AutoListByFloor(%)
-abc_abracadabra,0,0.1,,1900,2000,,,
+"Collection","MinPrice","MaxPrice","UnderFloor(%)","MinRank","MaxRank","Attributes","AutoListByPrice(%)","AutoListByFloor(%)"
+"starbots_parts","0","0.1","","","","","",""

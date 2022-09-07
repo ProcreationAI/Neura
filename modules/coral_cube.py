@@ -156,7 +156,7 @@ class CoralCube():
 
         try:
 
-            tx = self.client.get_transaction(tx_sig=tx, commitment=Commitment("finalized"))["result"]
+            tx = self.client.get_transaction(tx_sig=tx, commitment=Commitment("confirmed"))["result"]
             
             logs = "".join(tx["meta"]["logMessages"])
             accounts = tx["transaction"]["message"]["accountKeys"]

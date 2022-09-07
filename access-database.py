@@ -1,42 +1,60 @@
 from modules.neuradb import NeuraDB
 import random
 import string
-import json
-import theblockchainapi as api
+import requests
 
+API_KEY = 'sk_2jzfeU6qkb2BDuGHfDj89AJAYCe6chEu'
 
-API_LOG = ""
-API_SECRET = ""
+def get_license(license_key):
 
+    headers = {
+        'Authorization': f'Bearer {API_KEY}'
+    }
 
-def get_cm_nfts(cmid):
+    try:
+            
+        req = requests.get(f'https://api.metalabs.io/v4/licenses/{license_key}', headers=headers)
+        
+        if req.status_code == 200:
+            
+            return req.json()
 
-    all_nfts = resource.get_all_nfts_from_candy_machine(
-        candy_machine_id=cmid,
-        network=api.SolanaNetwork.MAINNET_BETA
-    )
+        return None
 
-    all_nfts = str(all_nfts).replace("'", '"').replace(
-        "True", "true").replace("False", "false")
+    except:
+        
+        return None
 
-    j = json.loads(all_nfts)
+def update_license(license_key, hardware_id):
+    
+    headers = {
+        'Authorization': f'Bearer {API_KEY}',
+        'Content-Type': 'application/json'
+    }
 
-    nfts = [nft_data["nft_metadata"]["mint"] for nft_data in j["minted_nfts"]]
+    payload = {
+        'metadata': {
+            'hwid': hardware_id
+        }
+    }
 
-    return nfts
+    try:
+            
+        req = requests.patch(
+            f'https://api.metalabs.io/v4/licenses/{license_key}',
+            headers=headers,
+            json=payload
+        )
 
+        if req.status_code == 200:
+            
+            return True
 
-def get_API():
-
-    global API_LOG, API_SECRET
-
-    resource = api.TheBlockchainAPIResource(
-
-        api_key_id=API_LOG,
-        api_secret_key=API_SECRET
-    )
-
-    return resource
+        return None
+    
+    except:
+        
+        return None
 
 
 def random_string(letter_count, digit_count):
@@ -65,18 +83,6 @@ def add_betas(num: int):
     return success
 
 
-def add_nfts(cmid: str):
-
-    nfts = get_cm_nfts(cmid)
-
-    print(f"Found {len(nfts)} NFTs")
-
-    success = database.add_nfts(nfts)
-
-    return success
-
-
-resource = get_API()
 
 database = NeuraDB(
     host="eu02-sql.pebblehost.com",

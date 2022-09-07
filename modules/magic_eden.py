@@ -1,6 +1,5 @@
 import json
 import requests
-from solana.message import Message
 from solana.rpc.api import Client
 from solana.rpc.types import TxOpts
 from solana.keypair import Keypair
@@ -9,8 +8,6 @@ from solana.transaction import Transaction, TransactionInstruction, AccountMeta
 from spl.token.instructions import get_associated_token_address
 from base58 import b58decode, b58encode
 from solana.rpc.commitment import Commitment
-from solana.blockhash import Blockhash
-from rich.console import Console
 from solana.rpc.core import UnconfirmedTxError
 from urllib.parse import quote
 
@@ -33,8 +30,6 @@ AUCTION_HOUSE = "E8cU1WiRWjanGxmn96ewBgk9vPTcL6AEZ1t6F6fkgUWe"
 AUCTION_FEE = "rFqFJ9g7TGBD8Ed7TPDnvGKZ5pWLPDyxLcvcH2eRCtt"
 PROGRAM_SIGNER = "1BWutmTvYPwDtmw9abTkS4Ssr8no61spGAvW1X6NDix"
 HAUS_PROGRAM = "hausS13jsjafwWwGqZTUQRmWyvyxn9EQpqMwV1PBBmk"
-
-console = Console(highlight=False, log_path=False)
 
 
 class MagicEden():
@@ -474,7 +469,7 @@ class MagicEden():
     
     def buy_nft(self, seller: str, price: int, mint: str, escrow: str, creators: list) -> str | None:
         
-        OPTS = TxOpts(skip_preflight=True, skip_confirmation=False, preflight_commitment=Commitment("processed"))
+        OPTS = TxOpts(skip_preflight=True, skip_confirmation=False, preflight_commitment=Commitment("confirmed"))
 
         transaction = Transaction()
         
