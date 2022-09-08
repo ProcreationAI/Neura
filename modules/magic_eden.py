@@ -238,6 +238,40 @@ class MagicEden():
             
             return None  
 
+    @staticmethod
+    def get_popular_collections(limit: int, window: str) -> None | list:
+        
+        headers = {
+            'Host': 'api-mainnet.magiceden.io',
+            'sec-ch-ua': '".Not/A)Brand";v="99", "Google Chrome";v="103", "Chromium";v="103"',
+            'accept': 'application/json, text/plain, */*',
+            'sec-ch-ua-mobile': '?0',
+            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36',
+            'sec-ch-ua-platform': '"macOS"',
+            'origin': 'https://magiceden.io',
+            'sec-fetch-site': 'same-site',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-dest': 'empty',
+            'referer': 'https://magiceden.io/',
+            'accept-language': 'es-ES,es;q=0.9',
+        }
+        
+        payload = create_tls_payload(
+            url=f"https://stats-mainnet.magiceden.io/collection_stats/popular_collections/sol?limit={limit}&window={window}",
+            method="GET",
+            headers=headers
+        )
+
+        try:
+            
+            res = requests.post("http://127.0.0.1:3000", json=payload).json()
+            
+            return json.loads(res["body"])
+        
+        except:
+            
+            return None
+
 
     def check_tx_is_listing(self, tx: str) -> dict | None:
 

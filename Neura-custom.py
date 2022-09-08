@@ -40,7 +40,7 @@ from modules import (
     ExchangeArt
 )
 
-from utils.constants import Bot, Discord, SolanaPrograms, SolanaEndpoints, Keys, IDLs
+from utils.constants import Bot, Custom, Discord, SolanaPrograms, SolanaEndpoints, Keys, IDLs
 from utils.bot import logger, get_config, get_hwid, set_app_title
 from utils.bypass import create_tls_payload, start_tls
 
@@ -78,12 +78,6 @@ def get_sol_wallets():
                 name = name if len(name) <= 9 else name[:9]
                 tasks = int(tasks) if int(tasks) > 0 else 0
                 address = get_pub_from_priv(privkey)
-                
-                if mode in [1, 2, 7, 9, 10] and tasks:
-                        
-                    if tasks > max_tasks:
-
-                        tasks = max_tasks
                         
                 if address:
 
@@ -1011,24 +1005,16 @@ def get_me_collection_metadata(symbol: str):
         
         if nft_metadata:
             
-            uri = nft_metadata["data"]["uri"]
-
-            uri_metadata = get_uri_metadata(uri=uri)
-
-            if uri_metadata:
-                                
-                attributes = [attribute["trait_type"] for attribute in uri_metadata["attributes"]] if uri_metadata.get("attributes") else []
-                
-                creators = nft_metadata["data"]["creators"]
-            
-                update_auth = nft_metadata["update_authority"]
-            
-                return {
-                    "creators": creators,
-                    "updateAuthority": update_auth,
-                    "attributes": attributes
-                }
+            creators = nft_metadata["data"]["creators"]
         
+            update_auth = nft_metadata["update_authority"]
+        
+            return {
+                "creators": creators,
+                "updateAuthority": update_auth,
+                "attributes": []
+            }
+    
     return None
 
 def get_cc_collection_metadata(symbol: str):
@@ -1047,24 +1033,16 @@ def get_cc_collection_metadata(symbol: str):
         nft_metadata = get_nft_metadata(mint_key=mint, rpc=mint_rpc)
         
         if nft_metadata:
-            
-            uri = nft_metadata["data"]["uri"]
-
-            uri_metadata = get_uri_metadata(uri=uri)
-
-            if uri_metadata:
-                                
-                attributes = [attribute["trait_type"] for attribute in uri_metadata["attributes"]] if uri_metadata.get("attributes") else []
-                
-                creators = nft_metadata["data"]["creators"]
-            
-                update_auth = nft_metadata["update_authority"]
-            
-                return {
-                    "creators": creators,
-                    "updateAuthority": update_auth,
-                    "attributes": attributes
-                }
+        
+            creators = nft_metadata["data"]["creators"]
+        
+            update_auth = nft_metadata["update_authority"]
+        
+            return {
+                "creators": creators,
+                "updateAuthority": update_auth,
+                "attributes": []
+            }
         
     return None
 
@@ -1222,7 +1200,7 @@ def monitor_sniper_file(file_name: str):
                 reader = list(reader)
                 
             keys = reader[0]
-            rows = reader[1:20]
+            rows = reader[1:25]
             
         
         except:
@@ -1283,40 +1261,46 @@ def monitor_sniper_file(file_name: str):
 def save_me_collection_current_floor(symbol: str):
     
     global current_floors
-
-    last_listed = MagicEden.get_listed_nfts(
-        symbol=symbol,
-        limit=2
-    )
-
-    if last_listed:
     
-        floor = last_listed[0]["price"]
-                    
-        current_floors[symbol] = floor
+
+    while True:
             
-    else:
+        last_listed = MagicEden.get_listed_nfts(
+            symbol=symbol,
+            limit=2
+        )
+
+        if last_listed:
         
-        current_floors[symbol] = None
+            floor = last_listed[0]["price"]
+                        
+            current_floors[symbol] = floor
+
+            break
+        
+        time.sleep(0.5)
+
 
 def save_cc_collection_current_floor(symbol: str):
     
     global current_floors
+    
+    while True:
 
-    last_listed = CoralCube.get_listed_nfts(
-        symbol=symbol,
-        limit=2
-    )
-    
-    if last_listed:
-    
-        floor = lamports_to_sol(last_listed[0]["price"])
-                    
-        current_floors[symbol] = floor
-            
-    else:
+        last_listed = CoralCube.get_listed_nfts(
+            symbol=symbol,
+            limit=2
+        )
         
-        current_floors[symbol] = None
+        if last_listed:
+        
+            floor = lamports_to_sol(last_listed[0]["price"])
+                        
+            current_floors[symbol] = floor
+
+            break
+        
+        time.sleep(0.5)
 
 def monitor_me_collection_floor():
             
@@ -1343,7 +1327,8 @@ def monitor_me_collection_floor():
                 
                 tr.join()
                 
-            time.sleep(10)
+            time.sleep(Custom.FP_MONITOR_POLLING)
+
 
 
 def monitor_cc_collection_floor():
@@ -1371,7 +1356,7 @@ def monitor_cc_collection_floor():
                 
                 tr.join()
                 
-            time.sleep(10)
+            time.sleep(Custom.FP_MONITOR_POLLING)
 
 def bifrost_dc_login(mint_site: str, dc_auth_token: str) -> None | BifrostAuth:
     
@@ -1905,107 +1890,9 @@ def get_module():
 
 
 
-
 set_app_title(f"Neura - {Bot.VERSION}")
 console = Console(highlight=False, log_path=False)
 
-try:
-    
-    import helheim
-    
-    helheim.auth(Keys.HELHEIM_API_KEY)
-    
-    helheim_auth = True
-    
-except:
-    
-    helheim_auth = True
-    
-
-try:
-    database = NeuraDB(
-        host="eu02-sql.pebblehost.com",
-        user="customer_253216_neura",
-        password="$7YDLyaCk-4zJpvkoLkU",
-        database="customer_253216_neura"
-    )
-
-except:
-
-    database = None
-
-
-while True:
-
-    clear()
-
-    if Bot.USER_OS == "darwin":
-        
-        break
-    
-    nft_holder = get_config(parameter="holder")
-    user_hwid = get_hwid()
-    
-    if user_hwid:
-            
-        if nft_holder:
-
-            if database:
-                
-                if "beta" in nft_holder:
-                    
-                    beta_access = database.check_beta_access(nft_holder, user_hwid)
-                    
-                    if beta_access:
-                        
-                        break
-                    
-                    else:
-
-                        console.input("[yellow] ERROR![/] [red]Invalid or already in use beta key [/]", password=True)
-
-                else:
-                        
-                    neura_hashlist = database.get_column_data("holders", "nft")
-
-                    if neura_hashlist:
-                        
-                        holder_pubkey = get_pub_from_priv(nft_holder)
-
-                        if holder_pubkey:
-                            
-                            holder_nft = wallet_is_holder(pubkey=holder_pubkey, hashlist=neura_hashlist)
-
-                            if holder_nft:
-
-                                access = database.check_holder_access(holder_nft, holder_pubkey, user_hwid)
-
-                                if access:
-
-                                    break
-
-                                else:
-                                    
-                                    console.input("[yellow] ERROR![/] [red]Provided Neura NFT pass is already in use [/]", password=True)
-
-                            else:
-                                console.input("[yellow] ERROR![/] [red]Provided holder wallet has no Neura NFT pass [/]", password=True)
-                        else:
-
-                            console.input("[yellow] ERROR![/] [red]Invalid holder wallet provided[/]", password=True)
-                            
-                    else:
-
-                        console.input("[yellow] ERROR![/] [red]Neura database is unreachable, please contact support [/]", password=True)
-            else:
-                console.input("[yellow] ERROR![/] [red]Unable to connect with the Nuera database, please restart and if the problem persists, contact Neura support [/]", password=True)
-        else:
-            console.input("[yellow] ERROR![/] [red]Invalid holder private key or beta access code [/]", password=True)
-
-    else:
-        console.input("[yellow] ERROR![/] [red]Unable to get device info, please contact support[/]", password=True)
-
-database.close_connection()
 
 while True:
 
@@ -2037,9 +1924,7 @@ while True:
     advanced_mode = get_config(parameter="advanced")
     success_webhook = get_config(parameter="webhook")
     dc_auth_token = get_config(parameter="discord")
-    
-    max_tasks = 1000
-    
+        
     valid_mint_rpc = validate_sol_rpc(rpc=mint_rpc)
     valid_snipe_rpc = validate_sol_rpc(rpc=snipe_rpc)
     
@@ -2130,7 +2015,7 @@ while True:
 
             while True:
                 
-                if helheim_auth:
+                if True:
                         
                     console.print(create_table_wallets(wallets))
                     print()
@@ -3644,7 +3529,7 @@ while True:
             
             while True:
                 
-                if helheim_auth:
+                if True:
                         
                     console.print(create_table_wallets(wallets))
                     print()

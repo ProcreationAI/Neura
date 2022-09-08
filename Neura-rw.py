@@ -40,7 +40,7 @@ from modules import (
     ExchangeArt
 )
 
-from utils.constants import Bot, Discord, SolanaPrograms, SolanaEndpoints, Keys, IDLs
+from utils.constants import Bot, Discord, Paths, SolanaPrograms, SolanaEndpoints, Keys, IDLs
 from utils.bot import logger, get_config, get_hwid, set_app_title
 from utils.bypass import create_tls_payload, start_tls
 
@@ -1878,6 +1878,25 @@ def check_node_health():
                 
             time.sleep(0.5)
 
+def check_license(license: str, hwid: str):
+    
+    url = Paths.NEURA_API_PATH + "renewal-auth"
+    
+    payload = {
+        "hwid": hwid,
+        "license": license
+    }
+    
+    try:
+        
+        res = requests.post(url, json=payload).json()
+        
+        return res["license"] if res["success"] else None
+    
+    except:
+        
+        return None
+
 def get_module():
 
     options = list(range(1, 10)) + [11, 12]
@@ -1933,10 +1952,13 @@ except:
 
     database = None
 
+license = get_config(parameter="license")
 
 while True:
 
     clear()
+    
+    renewal_user = None
 
     if Bot.USER_OS == "darwin":
         
@@ -1944,7 +1966,7 @@ while True:
     
     nft_holder = get_config(parameter="holder")
     user_hwid = get_hwid()
-    
+
     if user_hwid:
             
         if nft_holder:
@@ -1981,7 +2003,17 @@ while True:
 
                                 if access:
 
-                                    break
+                                    license = check_license(license, user_hwid)
+                                    
+                                    if license:
+                                        
+                                        renewal_user = license["user"]["username"]
+                                        
+                                        break
+                                    
+                                    else:
+                                                                                
+                                        console.input("[yellow] ERROR![/] [red]Invalid or already in use license [/]", password=True)
 
                                 else:
                                     
@@ -2034,7 +2066,6 @@ while True:
     snipe_rpc = get_config(parameter="snipe_rpc")
     user_time = get_config(parameter="time")
     advanced_mode = get_config(parameter="advanced")
-    await_mints = get_config(parameter="await_mints")
     success_webhook = get_config(parameter="webhook")
     dc_auth_token = get_config(parameter="discord")
     
@@ -2047,6 +2078,8 @@ while True:
 
     show_banner()
 
+    console.print(f" Welcome back, [purple]{renewal_user}[/]\n")
+    
     if mint_rpc and valid_mint_rpc:
 
         console.print(" {:<12} [green]{:<6}[/] [purple]> [/]{}".format("Mint RPC", "ON", f"{mint_rpc} [purple]>[/] {valid_mint_rpc} ms"))

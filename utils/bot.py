@@ -1,7 +1,6 @@
 from datetime import datetime
 import configparser
 import json
-import re
 import os
 import subprocess
 import sys
@@ -47,15 +46,16 @@ def get_config(parameter: str):
 
             return str(value).lower() == "y"
         
-        elif parameter == "await_mints":
-            
-            return int(value)
         
         elif parameter == "webhook":
             
             return str(value)
 
         elif parameter == "discord":
+            
+            return str(value)
+        
+        elif parameter == "license":
             
             return str(value)
         

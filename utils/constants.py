@@ -1,6 +1,11 @@
 import sys
 from pathlib import Path
 
+
+class Custom():
+    
+    FP_MONITOR_POLLING = 5
+
 class SolanaEndpoints():
     
     MAINNET_RPC = "https://api.mainnet-beta.solana.com"
@@ -8,7 +13,7 @@ class SolanaEndpoints():
     
 class Bot():
     
-    VERSION = "0.21.2.0"
+    VERSION = "0.21.3.0"
     USER_OS = sys.platform
 
 class Discord():
@@ -28,6 +33,7 @@ class Keys():
 class Paths():
     
     TLS_PATH = str(Path("bin/TLS").resolve()) if sys.platform == "darwin" else str(Path("bin/TLS.exe").resolve())
+    NEURA_API_PATH = "https://neura-api.herokuapp.com/"
     
 class SolanaPrograms():
     
