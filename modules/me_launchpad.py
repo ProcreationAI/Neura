@@ -245,11 +245,14 @@ class MagicEdenLaunchpad():
             
             tx = Transaction.deserialize(b58decode(tx_data)) 
 
-            wallet = Wallet(self.payer)
+            """ wallet = Wallet(self.payer)
             
             tx = wallet.sign_all_transactions([tx])[0]
             
-            tx.sign_partial(*[self.mint_account])
+            tx.sign_partial(*[self.mint_account]) """
+            
+            tx.add_signer(self.mint_account)
+            tx.add_signer(self.payer)
 
             serialized = tx.serialize(verify_signatures=False)
 

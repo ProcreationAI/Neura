@@ -1278,7 +1278,7 @@ def save_me_collection_current_floor(symbol: str):
 
             break
         
-        time.sleep(0.5)
+        time.sleep(1)
 
 
 def save_cc_collection_current_floor(symbol: str):
@@ -1300,7 +1300,7 @@ def save_cc_collection_current_floor(symbol: str):
 
             break
         
-        time.sleep(0.5)
+        time.sleep(1)
 
 def monitor_me_collection_floor():
             
@@ -2267,7 +2267,7 @@ while True:
                             listing_price = (price_in_sol + (price_in_sol * autolist_by_price/100))
                                 
                         elif autolist_by_floor is not None and collection_floor:
-                                                                                
+                                       
                             listing_price = (collection_floor + (collection_floor * autolist_by_floor/100))
                         
                         if listing_price:
